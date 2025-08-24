@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var DATABASE_FILE = "tinycrm.db"
+
 var monthsInPortuguese = map[string]string{
 	"January":   "Janeiro",
 	"February":  "Fevereiro",
@@ -212,7 +214,7 @@ func (r *Repository) DeleteInvoice(id uint) error {
 
 func (r *Repository) Migrate() {
 	fmt.Println("Running migrations...")
-	db, err := gorm.Open(sqlite.Open("tinycrm.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(DATABASE_FILE), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
