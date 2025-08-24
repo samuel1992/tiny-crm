@@ -28,48 +28,48 @@ var monthsInPortuguese = map[string]string{
 }
 
 type RemitInformation struct {
-	ID    uint                   `gorm:"primaryKey"`
-	Name  string                 `gorm:"size:255;not null"`
-	Lines []RemitInformationLine `gorm:"foreignKey:RemitInformationID"`
+	ID    uint                   `gorm:"primaryKey" json:"id"`
+	Name  string                 `gorm:"size:255;not null" json:"name"`
+	Lines []RemitInformationLine `gorm:"foreignKey:RemitInformationID" json:"lines"`
 }
 
 type RemitInformationLine struct {
-	ID                 uint             `gorm:"primaryKey"`
-	Key                string           `gorm:"size:255;not null"`
-	Value              string           `gorm:"size:255;not null"`
-	RemitInformationID uint             `gorm:"not null"`
-	RemitInformation   RemitInformation `gorm:"constraint:OnDelete:CASCADE"`
+	ID                 uint             `gorm:"primaryKey" json:"id"`
+	Key                string           `gorm:"size:255;not null" json:"key"`
+	Value              string           `gorm:"size:255;not null" json:"value"`
+	RemitInformationID uint             `gorm:"not null" json:"remit_information_id"`
+	RemitInformation   RemitInformation `gorm:"constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type Product struct {
-	ID          uint    `gorm:"primaryKey"`
-	Name        string  `gorm:"size:255;not null"`
-	Description *string `gorm:"type:text"`
-	Price       float64 `gorm:"type:decimal(10,2);not null"`
+	ID          uint    `gorm:"primaryKey" json:"id"`
+	Name        string  `gorm:"size:255;not null" json:"name"`
+	Description *string `gorm:"type:text" json:"description"`
+	Price       float64 `gorm:"type:decimal(10,2);not null" json:"price"`
 }
 
 type Company struct {
-	ID       uint   `gorm:"primaryKey"`
-	Name     string `gorm:"size:255;not null"`
-	Document string `gorm:"size:30;not null"`
-	Address  string `gorm:"type:text;not null"`
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	Name     string `gorm:"size:255;not null" json:"name"`
+	Document string `gorm:"size:30;not null" json:"document"`
+	Address  string `gorm:"type:text;not null" json:"address"`
 }
 
 type Invoice struct {
-	ID                    uint             `gorm:"primaryKey"`
-	UUID                  uuid.UUID        `gorm:"type:text"`
-	Number                *int             `gorm:"default:0"`
+	ID                    uint             `gorm:"primaryKey" json:"id"`
+	UUID                  uuid.UUID        `gorm:"type:text" json:"uuid"`
+	Number                *int             `gorm:"default:0" json:"number"`
 	AdditionalInformation *string          `gorm:"type:text" json:"additional_information"`
-	Discount              float64          `gorm:"type:decimal(10,2);default:0.00"`
-	Penalty               float64          `gorm:"type:decimal(10,2);default:0.00"`
+	Discount              float64          `gorm:"type:decimal(10,2);default:0.00" json:"discount"`
+	Penalty               float64          `gorm:"type:decimal(10,2);default:0.00" json:"penalty"`
 	IssueDate             time.Time        `gorm:"default:CURRENT_TIMESTAMP" json:"issue_date"`
 	DueDate               time.Time        `gorm:"not null" json:"due_date"`
 	RemitInformationID    uint             `gorm:"not null" json:"remit_information_id"`
-	RemitInformation      RemitInformation `gorm:"constraint:OnDelete:CASCADE"`
+	RemitInformation      RemitInformation `gorm:"constraint:OnDelete:CASCADE" json:"remit_information"`
 	CompanyID             uint             `gorm:"not null" json:"company_id"`
-	Company               Company          `gorm:"constraint:OnDelete:CASCADE"`
+	Company               Company          `gorm:"constraint:OnDelete:CASCADE" json:"company"`
 	ClientID              uint             `gorm:"not null" json:"client_id"`
-	Client                Company          `gorm:"constraint:OnDelete:CASCADE"`
+	Client                Company          `gorm:"constraint:OnDelete:CASCADE" json:"client"`
 	InvoiceLines          []InvoiceLine    `gorm:"foreignKey:InvoiceID" json:"invoice_lines"`
 }
 
@@ -81,13 +81,13 @@ func (invoice *Invoice) BeforeCreate(tx *gorm.DB) error {
 }
 
 type InvoiceLine struct {
-	ID          uint    `gorm:"primaryKey"`
+	ID          uint    `gorm:"primaryKey" json:"id"`
 	InvoiceID   uint    `gorm:"not null" json:"invoice_id"`
-	Invoice     Invoice `gorm:"constraint:OnDelete:CASCADE"`
+	Invoice     Invoice `gorm:"constraint:OnDelete:CASCADE" json:"-"`
 	ProductID   uint    `gorm:"not null" json:"product_id"`
-	Product     Product `gorm:"constraint:OnDelete:RESTRICT"`
-	Quantity    int     `gorm:"default:1;not null"`
-	Description *string `gorm:"size:255"`
+	Product     Product `gorm:"constraint:OnDelete:RESTRICT" json:"product"`
+	Quantity    int     `gorm:"default:1;not null" json:"quantity"`
+	Description *string `gorm:"size:255" json:"description"`
 }
 
 type Repository struct {
