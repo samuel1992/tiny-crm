@@ -149,7 +149,7 @@ func TestCompanyCreate(t *testing.T) {
 		"address": "456 Integration Ave, Test City, ST"
 	}`
 
-	resp, body, err := makeRequest(server, "POST", "/company/", companyJSON)
+	resp, body, err := makeRequest(server, "POST", "/api/companies", companyJSON)
 	if err != nil {
 		t.Fatalf("Failed to create company: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestCompanyGet(t *testing.T) {
 		t.Fatalf("Failed to create test company: %v", err)
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/company/"+strconv.Itoa(int(company.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/companies/"+strconv.Itoa(int(company.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to get company: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestCompanyList(t *testing.T) {
 		}
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/company/", "")
+	resp, body, err := makeRequest(server, "GET", "/api/companies", "")
 	if err != nil {
 		t.Fatalf("Failed to list companies: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestCompanyUpdate(t *testing.T) {
 		"address": "789 Updated Street, New City, ST"
 	}`
 
-	resp, body, err := makeRequest(server, "PUT", "/company/"+strconv.Itoa(int(company.ID)), updateJSON)
+	resp, body, err := makeRequest(server, "PUT", "/api/companies/"+strconv.Itoa(int(company.ID)), updateJSON)
 	if err != nil {
 		t.Fatalf("Failed to update company: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestCompanyDelete(t *testing.T) {
 		t.Fatalf("Failed to create test company: %v", err)
 	}
 
-	resp, _, err := makeRequest(server, "DELETE", "/company/"+strconv.Itoa(int(company.ID)), "")
+	resp, _, err := makeRequest(server, "DELETE", "/api/companies/"+strconv.Itoa(int(company.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to delete company: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestCompanyDelete(t *testing.T) {
 	}
 
 	// Verify deletion by trying to fetch
-	resp, body, err := makeRequest(server, "GET", "/company/"+strconv.Itoa(int(company.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/companies/"+strconv.Itoa(int(company.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to verify deletion: %v", err)
 	}
@@ -339,7 +339,7 @@ func TestProductCreate(t *testing.T) {
 		"price": 149.99
 	}`
 
-	resp, body, err := makeRequest(server, "POST", "/product/", productJSON)
+	resp, body, err := makeRequest(server, "POST", "/api/products", productJSON)
 	if err != nil {
 		t.Fatalf("Failed to create product: %v", err)
 	}
@@ -376,7 +376,7 @@ func TestProductCreateWithoutDescription(t *testing.T) {
 		"price": 99.99
 	}`
 
-	resp, body, err := makeRequest(server, "POST", "/product/", productJSON)
+	resp, body, err := makeRequest(server, "POST", "/api/products", productJSON)
 	if err != nil {
 		t.Fatalf("Failed to create product without description: %v", err)
 	}
@@ -415,7 +415,7 @@ func TestProductGet(t *testing.T) {
 		t.Fatalf("Failed to create test product: %v", err)
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/product/"+strconv.Itoa(int(product.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/products/"+strconv.Itoa(int(product.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to get product: %v", err)
 	}
@@ -453,7 +453,7 @@ func TestProductList(t *testing.T) {
 		}
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/product/", "")
+	resp, body, err := makeRequest(server, "GET", "/api/products", "")
 	if err != nil {
 		t.Fatalf("Failed to list products: %v", err)
 	}
@@ -492,7 +492,7 @@ func TestProductUpdate(t *testing.T) {
 		"price": 199.99
 	}`
 
-	resp, body, err := makeRequest(server, "PUT", "/product/"+strconv.Itoa(int(product.ID)), updateJSON)
+	resp, body, err := makeRequest(server, "PUT", "/api/products/"+strconv.Itoa(int(product.ID)), updateJSON)
 	if err != nil {
 		t.Fatalf("Failed to update product: %v", err)
 	}
@@ -530,7 +530,7 @@ func TestProductDelete(t *testing.T) {
 		t.Fatalf("Failed to create test product: %v", err)
 	}
 
-	resp, _, err := makeRequest(server, "DELETE", "/product/"+strconv.Itoa(int(product.ID)), "")
+	resp, _, err := makeRequest(server, "DELETE", "/api/products/"+strconv.Itoa(int(product.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to delete product: %v", err)
 	}
@@ -540,7 +540,7 @@ func TestProductDelete(t *testing.T) {
 	}
 
 	// Verify deletion by trying to fetch
-	resp, body, err := makeRequest(server, "GET", "/product/"+strconv.Itoa(int(product.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/products/"+strconv.Itoa(int(product.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to verify deletion: %v", err)
 	}
@@ -571,7 +571,7 @@ func TestRemitInformationCreate(t *testing.T) {
 		]
 	}`
 
-	resp, body, err := makeRequest(server, "POST", "/remit/", remitJSON)
+	resp, body, err := makeRequest(server, "POST", "/api/remit", remitJSON)
 	if err != nil {
 		t.Fatalf("Failed to create remit information: %v", err)
 	}
@@ -612,7 +612,7 @@ func TestRemitInformationGet(t *testing.T) {
 		t.Fatalf("Failed to create test remit: %v", err)
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/remit/"+strconv.Itoa(int(remit.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/remit/"+strconv.Itoa(int(remit.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to get remit information: %v", err)
 	}
@@ -653,7 +653,7 @@ func TestRemitInformationList(t *testing.T) {
 		}
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/remit/", "")
+	resp, body, err := makeRequest(server, "GET", "/api/remit", "")
 	if err != nil {
 		t.Fatalf("Failed to list remit informations: %v", err)
 	}
@@ -702,7 +702,7 @@ func TestRemitInformationUpdate(t *testing.T) {
 		]
 	}`
 
-	resp, body, err := makeRequest(server, "PUT", "/remit/"+strconv.Itoa(int(remit.ID)), updateJSON)
+	resp, body, err := makeRequest(server, "PUT", "/api/remit/"+strconv.Itoa(int(remit.ID)), updateJSON)
 	if err != nil {
 		t.Fatalf("Failed to update remit information: %v", err)
 	}
@@ -750,7 +750,7 @@ func TestRemitInformationDelete(t *testing.T) {
 		t.Error("RemitInformationLines should be created with the remit")
 	}
 
-	resp, _, err := makeRequest(server, "DELETE", "/remit/"+strconv.Itoa(int(remit.ID)), "")
+	resp, _, err := makeRequest(server, "DELETE", "/api/remit/"+strconv.Itoa(int(remit.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to delete remit information: %v", err)
 	}
@@ -760,7 +760,7 @@ func TestRemitInformationDelete(t *testing.T) {
 	}
 
 	// Verify deletion by trying to fetch
-	resp, body, err := makeRequest(server, "GET", "/remit/"+strconv.Itoa(int(remit.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/remit/"+strconv.Itoa(int(remit.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to verify deletion: %v", err)
 	}
@@ -808,7 +808,7 @@ func TestInvoiceCreate(t *testing.T) {
 		]
 	}`, remitID, companyID, companyID, productID)
 
-	resp, body, err := makeRequest(server, "POST", "/invoice/", invoiceJSON)
+	resp, body, err := makeRequest(server, "POST", "/api/invoices", invoiceJSON)
 	if err != nil {
 		t.Fatalf("Failed to create invoice: %v", err)
 	}
@@ -866,7 +866,7 @@ func TestInvoiceGet(t *testing.T) {
 		t.Fatalf("Failed to create test invoice: %v", err)
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/invoice/"+strconv.Itoa(int(invoice.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/invoices/"+strconv.Itoa(int(invoice.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to get invoice: %v", err)
 	}
@@ -942,7 +942,7 @@ func TestInvoiceList(t *testing.T) {
 		}
 	}
 
-	resp, body, err := makeRequest(server, "GET", "/invoice/", "")
+	resp, body, err := makeRequest(server, "GET", "/api/invoices", "")
 	if err != nil {
 		t.Fatalf("Failed to list invoices: %v", err)
 	}
@@ -1017,7 +1017,7 @@ func TestInvoiceUpdate(t *testing.T) {
 		]
 	}`, remitID, companyID, companyID, productID)
 
-	resp, body, err := makeRequest(server, "PUT", "/invoice/"+strconv.Itoa(int(invoice.ID)), updateJSON)
+	resp, body, err := makeRequest(server, "PUT", "/api/invoices/"+strconv.Itoa(int(invoice.ID)), updateJSON)
 	if err != nil {
 		t.Fatalf("Failed to update invoice: %v", err)
 	}
@@ -1079,7 +1079,7 @@ func TestInvoiceDelete(t *testing.T) {
 		t.Error("InvoiceLines should be created with the invoice")
 	}
 
-	resp, _, err := makeRequest(server, "DELETE", "/invoice/"+strconv.Itoa(int(invoice.ID)), "")
+	resp, _, err := makeRequest(server, "DELETE", "/api/invoices/"+strconv.Itoa(int(invoice.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to delete invoice: %v", err)
 	}
@@ -1089,7 +1089,7 @@ func TestInvoiceDelete(t *testing.T) {
 	}
 
 	// Verify deletion by trying to fetch
-	resp, body, err := makeRequest(server, "GET", "/invoice/"+strconv.Itoa(int(invoice.ID)), "")
+	resp, body, err := makeRequest(server, "GET", "/api/invoices/"+strconv.Itoa(int(invoice.ID)), "")
 	if err != nil {
 		t.Fatalf("Failed to verify deletion: %v", err)
 	}
@@ -1113,7 +1113,7 @@ func TestCompanyGetInvalidID(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/company/invalid", "")
+	resp, body, err := makeRequest(server, "GET", "/api/companies/invalid", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1127,7 +1127,7 @@ func TestCompanyGetNotFound(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/company/99999", "")
+	resp, body, err := makeRequest(server, "GET", "/api/companies/99999", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1141,7 +1141,7 @@ func TestCompanyCreateMalformedJSON(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "POST", "/company/", `{"name": "Test", invalid json}`)
+	resp, body, err := makeRequest(server, "POST", "/api/companies", `{"name": "Test", invalid json}`)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1156,7 +1156,7 @@ func TestCompanyUpdateInvalidID(t *testing.T) {
 	defer server.Close()
 
 	companyData := `{"name": "Updated Company", "document": "987654321", "address": "Updated Address"}`
-	resp, body, err := makeRequest(server, "PUT", "/company/invalid", companyData)
+	resp, body, err := makeRequest(server, "PUT", "/api/companies/invalid", companyData)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1170,7 +1170,7 @@ func TestCompanyDeleteInvalidID(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "DELETE", "/company/invalid", "")
+	resp, body, err := makeRequest(server, "DELETE", "/api/companies/invalid", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1184,7 +1184,7 @@ func TestProductGetInvalidID(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/product/invalid", "")
+	resp, body, err := makeRequest(server, "GET", "/api/products/invalid", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1198,7 +1198,7 @@ func TestProductGetNotFound(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/product/99999", "")
+	resp, body, err := makeRequest(server, "GET", "/api/products/99999", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1212,7 +1212,7 @@ func TestProductCreateMalformedJSON(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "POST", "/product/", `{"name": "Test", invalid json}`)
+	resp, body, err := makeRequest(server, "POST", "/api/products", `{"name": "Test", invalid json}`)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1226,7 +1226,7 @@ func TestRemitInformationGetInvalidID(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/remit/invalid", "")
+	resp, body, err := makeRequest(server, "GET", "/api/remit/invalid", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1240,7 +1240,7 @@ func TestRemitInformationGetNotFound(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/remit/99999", "")
+	resp, body, err := makeRequest(server, "GET", "/api/remit/99999", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1254,7 +1254,7 @@ func TestInvoiceGetInvalidID(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/invoice/invalid", "")
+	resp, body, err := makeRequest(server, "GET", "/api/invoices/invalid", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1268,7 +1268,7 @@ func TestInvoiceGetNotFound(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "GET", "/invoice/99999", "")
+	resp, body, err := makeRequest(server, "GET", "/api/invoices/99999", "")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
@@ -1282,7 +1282,7 @@ func TestInvoiceCreateMalformedJSON(t *testing.T) {
 	server, _ := setupTestServer(t)
 	defer server.Close()
 
-	resp, body, err := makeRequest(server, "POST", "/invoice/", `{"number": 1, invalid json}`)
+	resp, body, err := makeRequest(server, "POST", "/api/invoices", `{"number": 1, invalid json}`)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}

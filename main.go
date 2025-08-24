@@ -3,49 +3,48 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
 )
 
 var repo *Repository
-var tmpl *template.Template
-
-type DashboardData struct {
-	Companies  []Company
-	Products   []Product
-	RemitInfos []RemitInformation
-}
 
 func setupRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	fs := http.FileServer(http.Dir("templates/"))
-	mux.Handle("/", fs)
+	// Serve index.html at root path
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, "templates/index.html")
+			return
+		}
+		http.NotFound(w, r)
+	})
 
-	mux.HandleFunc("GET /company/", getCompanies)
-	mux.HandleFunc("POST /company/", createCompany)
-	mux.HandleFunc("GET /company/{companyId}", getCompany)
-	mux.HandleFunc("PUT /company/{companyId}", updateCompany)
-	mux.HandleFunc("DELETE /company/{companyId}", deleteCompany)
+	// API routes
+	mux.HandleFunc("GET /api/companies", getCompanies)
+	mux.HandleFunc("POST /api/companies", createCompany)
+	mux.HandleFunc("GET /api/companies/{companyId}", getCompany)
+	mux.HandleFunc("PUT /api/companies/{companyId}", updateCompany)
+	mux.HandleFunc("DELETE /api/companies/{companyId}", deleteCompany)
 
-	mux.HandleFunc("GET /remit/", getRemitInformations)
-	mux.HandleFunc("POST /remit/", createRemitInformation)
-	mux.HandleFunc("GET /remit/{remitId}", getRemitInformation)
-	mux.HandleFunc("PUT /remit/{remitId}", updateRemitInformation)
-	mux.HandleFunc("DELETE /remit/{remitId}", deleteRemitInformation)
+	mux.HandleFunc("GET /api/remit", getRemitInformations)
+	mux.HandleFunc("POST /api/remit", createRemitInformation)
+	mux.HandleFunc("GET /api/remit/{remitId}", getRemitInformation)
+	mux.HandleFunc("PUT /api/remit/{remitId}", updateRemitInformation)
+	mux.HandleFunc("DELETE /api/remit/{remitId}", deleteRemitInformation)
 
-	mux.HandleFunc("GET /product/", getProducts)
-	mux.HandleFunc("POST /product/", createProduct)
-	mux.HandleFunc("GET /product/{productId}", getProduct)
-	mux.HandleFunc("PUT /product/{productId}", updateProduct)
-	mux.HandleFunc("DELETE /product/{productId}", deleteProduct)
+	mux.HandleFunc("GET /api/products", getProducts)
+	mux.HandleFunc("POST /api/products", createProduct)
+	mux.HandleFunc("GET /api/products/{productId}", getProduct)
+	mux.HandleFunc("PUT /api/products/{productId}", updateProduct)
+	mux.HandleFunc("DELETE /api/products/{productId}", deleteProduct)
 
-	mux.HandleFunc("GET /invoice/", getInvoices)
-	mux.HandleFunc("POST /invoice/", createInvoice)
-	mux.HandleFunc("GET /invoice/{invoiceId}", getInvoice)
-	mux.HandleFunc("PUT /invoice/{invoiceId}", updateInvoice)
-	mux.HandleFunc("DELETE /invoice/{invoiceId}", deleteInvoice)
+	mux.HandleFunc("GET /api/invoices", getInvoices)
+	mux.HandleFunc("POST /api/invoices", createInvoice)
+	mux.HandleFunc("GET /api/invoices/{invoiceId}", getInvoice)
+	mux.HandleFunc("PUT /api/invoices/{invoiceId}", updateInvoice)
+	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", deleteInvoice)
 
 	return mux
 }
@@ -58,18 +57,6 @@ func main() {
 	}
 	repo.Migrate()
 
-	// Parse templates
-	tmpl, err = template.ParseGlob("templates/*.html")
-	if err != nil {
-		panic(err)
-	}
-
-	// Debug: Print available template names
-	fmt.Println("Available templates:")
-	for _, t := range tmpl.Templates() {
-		fmt.Printf("- %s\n", t.Name())
-	}
-
 	mux := setupRoutes()
 
 	fmt.Println("Running on port 8080")
@@ -77,11 +64,10 @@ func main() {
 }
 
 func getCompanies(w http.ResponseWriter, r *http.Request) {
-	var companies []Company
-	var err error
-	companies, err = repo.GetCompanies()
+	companies, err := repo.GetCompanies()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -157,12 +143,6 @@ func deleteCompany(w http.ResponseWriter, r *http.Request) {
 
 	if err := repo.DeleteCompany(uint(companyId)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// For HTMX requests, return empty response to remove the element
-	if r.Header.Get("HX-Request") == "true" {
-		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -253,12 +233,6 @@ func deleteRemitInformation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For HTMX requests, return empty response to remove the element
-	if r.Header.Get("HX-Request") == "true" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -343,12 +317,6 @@ func deleteProduct(w http.ResponseWriter, r *http.Request) {
 
 	if err := repo.DeleteProduct(uint(productId)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// For HTMX requests, return empty response to remove the element
-	if r.Header.Get("HX-Request") == "true" {
-		w.WriteHeader(http.StatusOK)
 		return
 	}
 
