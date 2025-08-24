@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var DATABASE_FILE = "tinycrm.db"
@@ -56,27 +57,34 @@ type Company struct {
 
 type Invoice struct {
 	ID                    uint             `gorm:"primaryKey"`
-	UUID                  uuid.UUID        `gorm:"type:uuid;default:gen_random_uuid()"`
+	UUID                  uuid.UUID        `gorm:"type:text"`
 	Number                *int             `gorm:"default:0"`
-	AdditionalInformation *string          `gorm:"type:text"`
+	AdditionalInformation *string          `gorm:"type:text" json:"additional_information"`
 	Discount              float64          `gorm:"type:decimal(10,2);default:0.00"`
 	Penalty               float64          `gorm:"type:decimal(10,2);default:0.00"`
-	IssueDate             time.Time        `gorm:"default:CURRENT_TIMESTAMP"`
-	DueDate               time.Time        `gorm:"not null"`
-	RemitInformationID    uint             `gorm:"not null"`
+	IssueDate             time.Time        `gorm:"default:CURRENT_TIMESTAMP" json:"issue_date"`
+	DueDate               time.Time        `gorm:"not null" json:"due_date"`
+	RemitInformationID    uint             `gorm:"not null" json:"remit_information_id"`
 	RemitInformation      RemitInformation `gorm:"constraint:OnDelete:CASCADE"`
-	CompanyID             uint             `gorm:"not null"`
+	CompanyID             uint             `gorm:"not null" json:"company_id"`
 	Company               Company          `gorm:"constraint:OnDelete:CASCADE"`
-	ClientID              uint             `gorm:"not null"`
+	ClientID              uint             `gorm:"not null" json:"client_id"`
 	Client                Company          `gorm:"constraint:OnDelete:CASCADE"`
-	InvoiceLines          []InvoiceLine    `gorm:"foreignKey:InvoiceID"`
+	InvoiceLines          []InvoiceLine    `gorm:"foreignKey:InvoiceID" json:"invoice_lines"`
+}
+
+func (invoice *Invoice) BeforeCreate(tx *gorm.DB) error {
+	if invoice.UUID == (uuid.UUID{}) {
+		invoice.UUID = uuid.New()
+	}
+	return nil
 }
 
 type InvoiceLine struct {
 	ID          uint    `gorm:"primaryKey"`
-	InvoiceID   uint    `gorm:"not null"`
+	InvoiceID   uint    `gorm:"not null" json:"invoice_id"`
 	Invoice     Invoice `gorm:"constraint:OnDelete:CASCADE"`
-	ProductID   uint    `gorm:"not null"`
+	ProductID   uint    `gorm:"not null" json:"product_id"`
 	Product     Product `gorm:"constraint:OnDelete:RESTRICT"`
 	Quantity    int     `gorm:"default:1;not null"`
 	Description *string `gorm:"size:255"`
@@ -125,7 +133,7 @@ func (r *Repository) GetCompanies() ([]Company, error) {
 }
 
 func (r *Repository) DeleteCompany(id uint) error {
-	return r.db.Delete(&Company{}, id).Error
+	return r.db.Select(clause.Associations).Delete(&Company{}, id).Error
 }
 
 // RemitInformation CRUD
@@ -153,6 +161,11 @@ func (r *Repository) GetRemitInformations() ([]RemitInformation, error) {
 }
 
 func (r *Repository) DeleteRemitInformation(id uint) error {
+	// First delete associated lines
+	if err := r.db.Where("remit_information_id = ?", id).Delete(&RemitInformationLine{}).Error; err != nil {
+		return err
+	}
+	// Then delete the main record
 	return r.db.Delete(&RemitInformation{}, id).Error
 }
 
@@ -181,7 +194,7 @@ func (r *Repository) GetProducts() ([]Product, error) {
 }
 
 func (r *Repository) DeleteProduct(id uint) error {
-	return r.db.Delete(&Product{}, id).Error
+	return r.db.Select(clause.Associations).Delete(&Product{}, id).Error
 }
 
 // Invoice CRUD
@@ -209,6 +222,11 @@ func (r *Repository) GetInvoices() ([]Invoice, error) {
 }
 
 func (r *Repository) DeleteInvoice(id uint) error {
+	// First delete associated invoice lines
+	if err := r.db.Where("invoice_id = ?", id).Delete(&InvoiceLine{}).Error; err != nil {
+		return err
+	}
+	// Then delete the main record
 	return r.db.Delete(&Invoice{}, id).Error
 }
 
