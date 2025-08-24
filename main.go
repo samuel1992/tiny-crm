@@ -14,11 +14,7 @@ func setupRoutes() *http.ServeMux {
 
 	// Serve index.html at root path
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.ServeFile(w, r, "templates/index.html")
-			return
-		}
-		http.NotFound(w, r)
+		http.ServeFile(w, r, "templates/index.html")
 	})
 
 	// API routes
