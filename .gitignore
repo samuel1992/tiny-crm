@@ -1,1 +1,3 @@
 *db
+templates/invoices/*
+!templates/invoices/default_*

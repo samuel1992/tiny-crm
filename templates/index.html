@@ -536,7 +536,7 @@
                         >
                           <option value="">Select product...</option>
                           <template x-for="product in products" :key="product.id">
-                            <option :value="product.id" x-text="product.name + ' - $' + product.price"></option>
+                            <option :value="product.id" x-text="product.name + ' - ' + product.price"></option>
                           </template>
                         </select>
                         <input 
@@ -550,20 +550,12 @@
                         <button 
                           type="button"
                           @click="removeInvoiceLine(index)"
-                          x-show="newInvoice.invoice_lines.length > 1"
+                          x-show="(editingInvoice ? editInvoice.invoice_lines.length : newInvoice.invoice_lines.length) > 1"
                           class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                           title="Remove line"
                         >
                           ×
                         </button>
-                      </div>
-                      <input 
-                        type="text" 
-                        x-model="line.description"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        placeholder="Optional description for this line item"
-                      >
-                    </div>
                   </template>
                   <button 
                     type="button"
@@ -644,6 +636,17 @@
                         </button>
                       </div>
                     </div>
+                    <div class="mt-4 pt-4 border-t border-gray-200 flex items-center gap-2">
+                        <select x-model="selectedTemplates[invoice.id]" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm">
+                            <option value="">Select a template</option>
+                            <template x-for="templ in templates">
+                              <option :value="templ" x-text="templ"></option>
+                            </template>
+                        </select>
+                        <button @click="openInvoice(invoice.id, selectedTemplates[invoice.id])" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-black text-sm font-medium">
+                            Open
+                        </button>
+                    </div>
                   </div>
                 </template>
               </div>
@@ -661,6 +664,8 @@
           products: [],
           remitInfos: [],
           invoices: [],
+          templates: [],
+          selectedTemplates: {},
           
           // Form visibility states
           showCompanyForm: false,
@@ -710,22 +715,32 @@
             this.loading = true;
             try {
               // Load all data in parallel
-              const [companiesRes, productsRes, remitRes, invoicesRes] = await Promise.all([
+              const [companiesRes, productsRes, remitRes, invoicesRes, templatesRes ] = await Promise.all([
                 fetch("/api/companies"),
                 fetch("/api/products"),
                 fetch("/api/remit"),
                 fetch("/api/invoices"),
+                fetch("/api/list_invoice_templates"),
               ]);
 
               this.companies = companiesRes.ok ? await companiesRes.json() : [];
               this.products = productsRes.ok ? await productsRes.json() : [];
               this.remitInfos = remitRes.ok ? await remitRes.json() : [];
               this.invoices = invoicesRes.ok ? await invoicesRes.json() : [];
+              this.templates = templatesRes.ok ? await templatesRes.json() : [];
             } catch (error) {
               console.error("Error loading dashboard data:", error);
             } finally {
               this.loading = false;
             }
+          },
+
+          openInvoice(invoiceId, templateName) {
+            if (!templateName) {
+              alert('Please select a template to open.');
+              return;
+            }
+            window.open(`/api/invoices/${invoiceId}/open?template=${templateName}`, '_blank');
           },
 
           async deleteCompany(id) {
