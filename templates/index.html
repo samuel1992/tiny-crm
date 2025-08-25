@@ -592,7 +592,7 @@
                         <div class="flex justify-between items-start mb-2">
                           <h3 class="font-medium text-gray-900">
                             Invoice #
-                            <span x-text="invoice.number || 'N/A'"></span>
+                            <span x-text="invoice.number || ''"></span>
                           </h3>
                           <div class="text-right text-sm text-gray-600">
                             <div x-show="invoice.discount > 0">
@@ -617,6 +617,10 @@
                         <p class="text-sm text-gray-500">
                           Company:
                           <span x-text="invoice.company?.name || 'Unknown'"></span>
+                        </p>
+                        <p class="text-sm text-gray-500">
+                          Client:
+                          <span x-text="invoice.client?.name || 'Unknown'"></span>
                         </p>
                       </div>
                       <div class="flex gap-2 ml-4">
