@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,6 +72,14 @@ type Invoice struct {
 	ClientID              uint             `gorm:"not null" json:"client_id"`
 	Client                Company          `gorm:"constraint:OnDelete:CASCADE" json:"client"`
 	InvoiceLines          []InvoiceLine    `gorm:"foreignKey:InvoiceID" json:"invoice_lines"`
+}
+
+func (i *Invoice) Identification() string {
+	if i.Number != nil {
+		return strconv.Itoa(*i.Number)
+	}
+
+	return i.UUID.String()
 }
 
 func (invoice *Invoice) BeforeCreate(tx *gorm.DB) error {
