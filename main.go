@@ -12,6 +12,7 @@ import (
 )
 
 var repo *Repository
+var PORT = "8080"
 
 func setupRoutes(testing bool) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -62,6 +63,10 @@ func main() {
 	}
 	repo.Migrate()
 
+	if len(os.Args) >= 2 && os.Args[1] == "--port" {
+		PORT = os.Args[2]
+	}
+
 	// Handle CLI commands
 	if len(os.Args) >= 2 && os.Args[1] == "adduser" {
 		if len(os.Args) != 4 {
@@ -103,8 +108,8 @@ func main() {
 
 	mux := setupRoutes(false)
 
-	fmt.Println("Running on port 8080")
-	http.ListenAndServe(":8080", mux)
+	fmt.Println("Running on port " + PORT)
+	http.ListenAndServe(":"+PORT, mux)
 }
 
 func getCompanies(w http.ResponseWriter, r *http.Request) {
