@@ -29,6 +29,13 @@ var monthsInPortuguese = map[string]string{
 	"December":  "Dezembro",
 }
 
+type User struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	Username     string    `gorm:"size:255;not null;uniqueIndex" json:"username"`
+	PasswordHash string    `gorm:"size:255;not null" json:"-"`
+	CreatedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+}
+
 type RemitInformation struct {
 	ID    uint                   `gorm:"primaryKey" json:"id"`
 	Name  string                 `gorm:"size:255;not null" json:"name"`
@@ -289,6 +296,7 @@ func (r *Repository) Migrate() {
 
 	// Migrate the schema
 	db.AutoMigrate(
+		&User{},
 		&RemitInformation{},
 		&RemitInformationLine{},
 		&Product{},
@@ -297,4 +305,18 @@ func (r *Repository) Migrate() {
 		&InvoiceLine{},
 	)
 	fmt.Println("Migrations completed.")
+}
+
+// User CRUD
+func (r *Repository) CreateUser(user *User) error {
+	return r.db.Create(user).Error
+}
+
+func (r *Repository) GetUserByUsername(username string) (*User, error) {
+	var user User
+	err := r.db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

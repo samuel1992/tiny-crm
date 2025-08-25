@@ -23,32 +23,32 @@ func setupRoutes() *http.ServeMux {
 		}
 	})
 
-	// API routes
-	mux.HandleFunc("GET /api/companies", getCompanies)
-	mux.HandleFunc("POST /api/companies", createCompany)
-	mux.HandleFunc("GET /api/companies/{companyId}", getCompany)
-	mux.HandleFunc("PUT /api/companies/{companyId}", updateCompany)
-	mux.HandleFunc("DELETE /api/companies/{companyId}", deleteCompany)
+	// Protected API routes
+	mux.HandleFunc("GET /api/companies", basicAuthMiddleware(getCompanies))
+	mux.HandleFunc("POST /api/companies", basicAuthMiddleware(createCompany))
+	mux.HandleFunc("GET /api/companies/{companyId}", basicAuthMiddleware(getCompany))
+	mux.HandleFunc("PUT /api/companies/{companyId}", basicAuthMiddleware(updateCompany))
+	mux.HandleFunc("DELETE /api/companies/{companyId}", basicAuthMiddleware(deleteCompany))
 
-	mux.HandleFunc("GET /api/remit", getRemitInformations)
-	mux.HandleFunc("POST /api/remit", createRemitInformation)
-	mux.HandleFunc("GET /api/remit/{remitId}", getRemitInformation)
-	mux.HandleFunc("PUT /api/remit/{remitId}", updateRemitInformation)
-	mux.HandleFunc("DELETE /api/remit/{remitId}", deleteRemitInformation)
+	mux.HandleFunc("GET /api/remit", basicAuthMiddleware(getRemitInformations))
+	mux.HandleFunc("POST /api/remit", basicAuthMiddleware(createRemitInformation))
+	mux.HandleFunc("GET /api/remit/{remitId}", basicAuthMiddleware(getRemitInformation))
+	mux.HandleFunc("PUT /api/remit/{remitId}", basicAuthMiddleware(updateRemitInformation))
+	mux.HandleFunc("DELETE /api/remit/{remitId}", basicAuthMiddleware(deleteRemitInformation))
 
-	mux.HandleFunc("GET /api/products", getProducts)
-	mux.HandleFunc("POST /api/products", createProduct)
-	mux.HandleFunc("GET /api/products/{productId}", getProduct)
-	mux.HandleFunc("PUT /api/products/{productId}", updateProduct)
-	mux.HandleFunc("DELETE /api/products/{productId}", deleteProduct)
+	mux.HandleFunc("GET /api/products", basicAuthMiddleware(getProducts))
+	mux.HandleFunc("POST /api/products", basicAuthMiddleware(createProduct))
+	mux.HandleFunc("GET /api/products/{productId}", basicAuthMiddleware(getProduct))
+	mux.HandleFunc("PUT /api/products/{productId}", basicAuthMiddleware(updateProduct))
+	mux.HandleFunc("DELETE /api/products/{productId}", basicAuthMiddleware(deleteProduct))
 
-	mux.HandleFunc("GET /api/invoices", getInvoices)
-	mux.HandleFunc("POST /api/invoices", createInvoice)
-	mux.HandleFunc("GET /api/invoices/{invoiceId}", getInvoice)
-	mux.HandleFunc("PUT /api/invoices/{invoiceId}", updateInvoice)
-	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", deleteInvoice)
-	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", openInvoice)
-	mux.HandleFunc("GET /api/list_invoice_templates", listTemplates)
+	mux.HandleFunc("GET /api/invoices", basicAuthMiddleware(getInvoices))
+	mux.HandleFunc("POST /api/invoices", basicAuthMiddleware(createInvoice))
+	mux.HandleFunc("GET /api/invoices/{invoiceId}", basicAuthMiddleware(getInvoice))
+	mux.HandleFunc("PUT /api/invoices/{invoiceId}", basicAuthMiddleware(updateInvoice))
+	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice))
+	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice))
+	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates))
 
 	return mux
 }
@@ -60,6 +60,45 @@ func main() {
 		panic(err)
 	}
 	repo.Migrate()
+
+	// Handle CLI commands
+	if len(os.Args) >= 2 && os.Args[1] == "adduser" {
+		if len(os.Args) != 4 {
+			fmt.Println("Usage: go run . adduser <username> <password>")
+			os.Exit(1)
+		}
+
+		username := os.Args[2]
+		password := os.Args[3]
+
+		// Check if user already exists
+		existingUser, _ := repo.GetUserByUsername(username)
+		if existingUser != nil {
+			fmt.Printf("User '%s' already exists\n", username)
+			os.Exit(1)
+		}
+
+		// Hash password
+		hashedPassword, err := hashPassword(password)
+		if err != nil {
+			fmt.Printf("Error hashing password: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Create user
+		user := &User{
+			Username:     username,
+			PasswordHash: hashedPassword,
+		}
+
+		if err := repo.CreateUser(user); err != nil {
+			fmt.Printf("Error creating user: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("User '%s' created successfully\n", username)
+		return
+	}
 
 	mux := setupRoutes()
 
