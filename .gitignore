@@ -1,3 +1,5 @@
 *db
 templates/invoices/*
 !templates/invoices/default_*
+tinycrm
+tinycrm-*
