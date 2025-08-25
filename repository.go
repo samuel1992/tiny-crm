@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -75,7 +76,7 @@ type Invoice struct {
 }
 
 func (i *Invoice) Identification() string {
-	if i.Number != nil {
+	if i.Number != nil && *i.Number != 0 {
 		return strconv.Itoa(*i.Number)
 	}
 
@@ -89,6 +90,29 @@ func (invoice *Invoice) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+func (i *Invoice) SubTotal() float64 {
+	var subTotal float64
+	for _, line := range i.InvoiceLines {
+		subTotal += line.Total()
+	}
+	return subTotal
+}
+
+func (i *Invoice) Total() float64 {
+	return i.SubTotal() - i.Discount + i.Penalty
+}
+
+func (i *Invoice) DueMonth() string {
+	return monthsInPortuguese[i.DueDate.Month().String()]
+}
+
+func (i *Invoice) Repr() string {
+	clientName := strings.ReplaceAll(i.Client.Name, " ", "")
+	issueDate := i.IssueDate.Format("20060102")
+	return fmt.Sprintf("%s_invoice_%s", clientName, issueDate)
+}
+
+
 type InvoiceLine struct {
 	ID          uint    `gorm:"primaryKey" json:"id"`
 	InvoiceID   uint    `gorm:"not null" json:"invoice_id"`
@@ -97,6 +121,10 @@ type InvoiceLine struct {
 	Product     Product `gorm:"constraint:OnDelete:RESTRICT" json:"product"`
 	Quantity    int     `gorm:"default:1;not null" json:"quantity"`
 	Description *string `gorm:"size:255" json:"description"`
+}
+
+func (il *InvoiceLine) Total() float64 {
+	return il.Product.Price * float64(il.Quantity)
 }
 
 type Repository struct {

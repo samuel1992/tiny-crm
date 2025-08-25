@@ -3,7 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -14,7 +18,9 @@ func setupRoutes() *http.ServeMux {
 
 	// Serve index.html at root path
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "templates/index.html")
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, "templates/index.html")
+		}
 	})
 
 	// API routes
@@ -41,6 +47,8 @@ func setupRoutes() *http.ServeMux {
 	mux.HandleFunc("GET /api/invoices/{invoiceId}", getInvoice)
 	mux.HandleFunc("PUT /api/invoices/{invoiceId}", updateInvoice)
 	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", deleteInvoice)
+	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", openInvoice)
+	mux.HandleFunc("GET /api/list_invoice_templates", listTemplates)
 
 	return mux
 }
@@ -404,4 +412,65 @@ func deleteInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func listTemplates(w http.ResponseWriter, r *http.Request) {
+	dirs, err := os.ReadDir("templates/invoices")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var templates []string
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			templates = append(templates, dir.Name())
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templates)
+}
+
+func openInvoice(w http.ResponseWriter, r *http.Request) {
+	invoiceIdStr := r.PathValue("invoiceId")
+	invoiceId, err := strconv.ParseUint(invoiceIdStr, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	templateName := r.URL.Query().Get("template")
+	if templateName == "" {
+		http.Error(w, "template query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	invoice, err := repo.GetInvoice(uint(invoiceId))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	templateData := struct {
+		Invoice *Invoice
+	}{
+		Invoice: invoice,
+	}
+
+	tmplPath := filepath.Join("templates", "invoices", templateName)
+	tmpl, err := template.ParseFiles(tmplPath)
+	if err != nil {
+		log.Printf("Error parsing template %s: %v", tmplPath, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	err = tmpl.Execute(w, templateData)
+	if err != nil {
+		log.Printf("Error executing template %s: %v", tmplPath, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
