@@ -770,6 +770,17 @@
                         >
                           ×
                         </button>
+                      </div>
+                      <!-- Description field for invoice line -->
+                      <div class="mt-2">
+                        <textarea 
+                          x-model="line.description"
+                          rows="2"
+                          class="form-input focus:ring-yellow-500 w-full"
+                          placeholder="Line description (optional)"
+                        ></textarea>
+                      </div>
+                    </div>
                   </template>
                   <button 
                     type="button"
@@ -800,7 +811,7 @@
               <div class="entity-list">
                 <div x-show="invoices.length === 0" class="empty-state">No invoices found</div>
               <div x-show="invoices.length > 0" class="space-y-4">
-                <template x-for="invoice in invoices" :key="invoice.id">
+                <template x-for="invoice in invoices.sort((a, b) => new Date(b.due_date) - new Date(a.due_date))" :key="invoice.id">
                   <div class="entity-card" 
                        :class="invoice.paid ? 'paid-invoice' : 'unpaid-invoice'">
                     <div class="flex justify-between items-start">
@@ -843,7 +854,7 @@
                         ></p>
                         <p class="text-sm text-gray-500 mt-1">
                           Due:
-                          <span x-text="new Date(invoice.due_date).toLocaleDateString()"></span>
+                          <span x-text="new Date(invoice.due_date).toLocaleDateString('en-CA')"></span>
                         </p>
                         <p class="text-sm text-gray-500">
                           Company:
@@ -853,6 +864,22 @@
                           Client:
                           <span x-text="invoice.client?.name || 'Unknown'"></span>
                         </p>
+                        <!-- Invoice Lines with descriptions -->
+                        <div x-show="invoice.invoice_lines && invoice.invoice_lines.length > 0" class="mt-3">
+                          <h4 class="text-sm font-medium text-gray-700 mb-2">Invoice Lines:</h4>
+                          <template x-for="line in invoice.invoice_lines" :key="line.id || Math.random()">
+                            <div class="text-sm text-gray-600 mb-1 pl-2 border-l-2 border-gray-200">
+                              <div class="flex justify-between items-start">
+                                <span x-text="line.product?.name || 'Unknown Product'"></span>
+                                <span class="text-xs text-gray-500">Qty: <span x-text="line.quantity"></span></span>
+                              </div>
+                              <p x-show="line.description && line.description.trim()" 
+                                 x-text="line.description" 
+                                 class="text-xs text-gray-500 mt-1 italic">
+                              </p>
+                            </div>
+                          </template>
+                        </div>
                       </div>
                       <div class="entity-actions">
                         <button
