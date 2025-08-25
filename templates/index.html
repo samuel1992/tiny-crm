@@ -192,7 +192,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between h-16">
             <h1 class="text-2xl font-bold text-gray-900">Tiny CRM Dashboard</h1>
-            <div class="flex items-center space-x-4 text-sm text-gray-600">
+            <div class="flex items-center space-x-6">
+              <div class="flex items-center space-x-4 text-sm text-gray-600">
               <span>
                 Companies:
                 <strong x-text="companies.length"></strong>
@@ -209,6 +210,17 @@
                 Invoices:
                 <strong x-text="invoices.length"></strong>
               </span>
+              </div>
+              <button 
+                @click="logout()"
+                class="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                title="Logout"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -983,6 +995,18 @@
               return;
             }
             window.open(`/api/invoices/${invoiceId}/open?template=${templateName}`, '_blank');
+          },
+
+          async logout() {
+            try {
+              await fetch('/api/logout', { method: 'POST' });
+              // Redirect to root to trigger authentication prompt
+              window.location.href = '/';
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Even if the request fails, redirect to trigger re-authentication
+              window.location.href = '/';
+            }
           },
 
           // =============================================

@@ -49,6 +49,7 @@ func setupRoutes(testing bool) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice, testing))
 	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice, testing))
 	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates, testing))
+	mux.HandleFunc("POST /api/logout", logout)
 
 	return mux
 }
@@ -512,4 +513,10 @@ func openInvoice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	// Set WWW-Authenticate header to prompt for new credentials
+	w.Header().Set("WWW-Authenticate", `Basic realm="Tiny CRM"`)
+	http.Error(w, "Logged out successfully", http.StatusUnauthorized)
 }
