@@ -514,6 +514,18 @@
                       placeholder="0.00"
                     >
                   </div>
+                  <div class="flex items-center mt-4">
+                    <input 
+                      type="checkbox" 
+                      :checked="editingInvoice ? editInvoice.paid : newInvoice.paid"
+                      @change="editingInvoice ? editInvoice.paid = $event.target.checked : newInvoice.paid = $event.target.checked"
+                      class="w-4 h-4 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2"
+                      id="paid-checkbox"
+                    >
+                    <label for="paid-checkbox" class="ml-2 text-sm font-medium text-gray-700">
+                      Paid
+                    </label>
+                  </div>
                 </div>
                 <div class="mt-4">
                   <label class="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
@@ -586,14 +598,30 @@
                 <div x-show="invoices.length === 0" class="text-center py-8 text-gray-500">No invoices found</div>
               <div x-show="invoices.length > 0" class="space-y-4">
                 <template x-for="invoice in invoices" :key="invoice.id">
-                  <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="border rounded-lg p-4" 
+                       :class="invoice.paid ? 'border-l-4 border-l-green-500 border-gray-200 bg-green-50' : 'border-l-4 border-l-red-500 border-gray-200'">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
                         <div class="flex justify-between items-start mb-2">
-                          <h3 class="font-medium text-gray-900">
-                            Invoice #
-                            <span x-text="invoice.number || ''"></span>
-                          </h3>
+                          <div class="flex items-center gap-2">
+                            <h3 class="font-medium text-gray-900">
+                              Invoice #
+                              <span x-text="invoice.number || ''"></span>
+                            </h3>
+                            <!-- Paid Status Badge -->
+                            <span x-show="invoice.paid" class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+                              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                              </svg>
+                              PAID
+                            </span>
+                            <span x-show="!invoice.paid" class="inline-flex items-center px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full">
+                              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                              </svg>
+                              UNPAID
+                            </span>
+                          </div>
                           <div class="text-right text-sm text-gray-600">
                             <div x-show="invoice.discount > 0">
                               Discount: $
@@ -624,6 +652,14 @@
                         </p>
                       </div>
                       <div class="flex gap-2 ml-4">
+                        <button
+                          @click="toggleInvoicePaid(invoice)"
+                          :class="invoice.paid ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'"
+                          class="text-sm font-medium"
+                          :title="invoice.paid ? 'Mark as Unpaid' : 'Mark as Paid'"
+                        >
+                          <span x-text="invoice.paid ? 'Mark Unpaid' : 'Mark Paid'"></span>
+                        </button>
                         <button
                           @click="startEditingInvoice(invoice)"
                           class="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
@@ -692,6 +728,7 @@
             additional_information: '',
             discount: 0,
             penalty: 0,
+            paid: false,
             due_date: '',
             remit_information_id: null,
             company_id: null,
@@ -708,6 +745,7 @@
             additional_information: '',
             discount: 0,
             penalty: 0,
+            paid: false,
             due_date: '',
             remit_information_id: null,
             company_id: null,
@@ -807,6 +845,37 @@
             }
           },
 
+          async toggleInvoicePaid(invoice) {
+            const newPaidStatus = !invoice.paid;
+            const action = newPaidStatus ? 'paid' : 'unpaid';
+            
+            if (!confirm(`Are you sure you want to mark this invoice as ${action}?`)) return;
+            
+            try {
+              const response = await fetch(`/api/invoices/${invoice.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...invoice,
+                  paid: newPaidStatus
+                })
+              });
+
+              if (response.ok) {
+                const updatedInvoice = await response.json();
+                const index = this.invoices.findIndex(i => i.id === invoice.id);
+                if (index !== -1) {
+                  this.invoices[index] = updatedInvoice;
+                }
+              } else {
+                alert(`Error marking invoice as ${action}`);
+              }
+            } catch (error) {
+              console.error(`Error toggling invoice paid status:`, error);
+              alert(`Error marking invoice as ${action}: ` + error.message);
+            }
+          },
+
           // Form management methods
           resetCompanyForm() {
             this.newCompany = { name: '', document: '', address: '' };
@@ -893,6 +962,7 @@
               additional_information: '',
               discount: 0,
               penalty: 0,
+              paid: false,
               due_date: '',
               remit_information_id: null,
               company_id: null,
@@ -903,30 +973,51 @@
             this.editingInvoice = null;
           },
 
-          startEditingInvoice(invoice) {
-            this.editingInvoice = invoice;
-            this.editInvoice = { 
-              number: invoice.number,
-              additional_information: invoice.additional_information || '',
-              discount: invoice.discount || 0,
-              penalty: invoice.penalty || 0,
-              due_date: new Date(invoice.due_date).toISOString().split('T')[0], // Format for date input
-              remit_information_id: invoice.remit_information_id,
-              company_id: invoice.company_id,
-              client_id: invoice.client_id,
-              invoice_lines: invoice.invoice_lines && invoice.invoice_lines.length > 0 
-                ? invoice.invoice_lines.map(line => ({ 
-                    product_id: line.product_id, 
-                    quantity: line.quantity, 
-                    description: line.description || '' 
-                  }))
-                : [{ product_id: null, quantity: 1, description: '' }]
-            };
-            this.showInvoiceForm = true;
-            // Hide other forms
-            this.showCompanyForm = false;
-            this.showProductForm = false;
-            this.showRemitForm = false;
+          async startEditingInvoice(invoice) {
+            this.loading = true;
+            
+            try {
+              // Fetch fresh invoice data from API
+              const response = await fetch(`/api/invoices/${invoice.id}`);
+              if (!response.ok) {
+                alert('Error fetching invoice details');
+                return;
+              }
+              
+              const freshInvoice = await response.json();
+              
+              this.editingInvoice = freshInvoice;
+              this.editInvoice = { 
+                number: freshInvoice.number,
+                additional_information: freshInvoice.additional_information || '',
+                discount: freshInvoice.discount || 0,
+                penalty: freshInvoice.penalty || 0,
+                paid: freshInvoice.paid || false,
+                due_date: new Date(freshInvoice.due_date).toISOString().split('T')[0], // Format for date input
+                remit_information_id: freshInvoice.remit_information_id,
+                company_id: freshInvoice.company_id,
+                client_id: freshInvoice.client_id,
+                invoice_lines: freshInvoice.invoice_lines && freshInvoice.invoice_lines.length > 0 
+                  ? freshInvoice.invoice_lines.map(line => ({ 
+                      product_id: line.product_id, 
+                      quantity: line.quantity, 
+                      description: line.description || '' 
+                    }))
+                  : [{ product_id: null, quantity: 1, description: '' }]
+              };
+              
+              this.showInvoiceForm = true;
+              // Hide other forms
+              this.showCompanyForm = false;
+              this.showProductForm = false;
+              this.showRemitForm = false;
+              
+            } catch (error) {
+              console.error('Error fetching invoice details:', error);
+              alert('Error fetching invoice details: ' + error.message);
+            } finally {
+              this.loading = false;
+            }
           },
 
           cancelEditInvoice() {
@@ -936,6 +1027,7 @@
               additional_information: '',
               discount: 0,
               penalty: 0,
+              paid: false,
               due_date: '',
               remit_information_id: null,
               company_id: null,
@@ -1182,6 +1274,7 @@
                 number: this.newInvoice.number ? parseInt(this.newInvoice.number) : null,
                 discount: parseFloat(this.newInvoice.discount) || 0,
                 penalty: parseFloat(this.newInvoice.penalty) || 0,
+                paid: this.newInvoice.paid || false,
                 due_date: new Date(this.newInvoice.due_date).toISOString(),
                 remit_information_id: parseInt(this.newInvoice.remit_information_id),
                 company_id: parseInt(this.newInvoice.company_id),
@@ -1224,6 +1317,7 @@
                 number: this.editInvoice.number ? parseInt(this.editInvoice.number) : null,
                 discount: parseFloat(this.editInvoice.discount) || 0,
                 penalty: parseFloat(this.editInvoice.penalty) || 0,
+                paid: this.editInvoice.paid || false,
                 due_date: new Date(this.editInvoice.due_date).toISOString(),
                 remit_information_id: parseInt(this.editInvoice.remit_information_id),
                 company_id: parseInt(this.editInvoice.company_id),

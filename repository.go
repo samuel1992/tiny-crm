@@ -64,6 +64,7 @@ type Invoice struct {
 	AdditionalInformation *string          `gorm:"type:text" json:"additional_information"`
 	Discount              float64          `gorm:"type:decimal(10,2);default:0.00" json:"discount"`
 	Penalty               float64          `gorm:"type:decimal(10,2);default:0.00" json:"penalty"`
+	Paid                  bool             `gorm:"default:false" json:"paid"`
 	IssueDate             time.Time        `gorm:"default:CURRENT_TIMESTAMP" json:"issue_date"`
 	DueDate               time.Time        `gorm:"not null" json:"due_date"`
 	RemitInformationID    uint             `gorm:"not null" json:"remit_information_id"`
@@ -249,7 +250,19 @@ func (r *Repository) CreateInvoice(invoice *Invoice) error {
 }
 
 func (r *Repository) UpdateInvoice(invoice *Invoice) error {
-	return r.db.Save(invoice).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// First, delete existing invoice lines
+		if err := tx.Where("invoice_id = ?", invoice.ID).Delete(&InvoiceLine{}).Error; err != nil {
+			return err
+		}
+		
+		// Then save the invoice with new lines
+		if err := tx.Save(invoice).Error; err != nil {
+			return err
+		}
+		
+		return nil
+	})
 }
 
 func (r *Repository) GetInvoices() ([]Invoice, error) {
