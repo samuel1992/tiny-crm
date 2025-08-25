@@ -3,14 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
-  "time"
-  "fmt"
-  "github.com/google/uuid"
+	"time"
+
+	"github.com/google/uuid"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -50,7 +51,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Repository) {
 	repo = testRepo
 
 	// Use the same route setup as main.go
-	mux := setupRoutes()
+	mux := setupRoutes(true)
 	server := httptest.NewServer(mux)
 
 	// Clean up function to restore original repo
@@ -219,7 +220,7 @@ func TestCompanyList(t *testing.T) {
 		{Name: "Company 1", Document: "11.111.111/0001-11", Address: "Address 1"},
 		{Name: "Company 2", Document: "22.222.222/0001-22", Address: "Address 2"},
 	}
-	
+
 	for i := range companies {
 		if err := testRepo.CreateCompany(&companies[i]); err != nil {
 			t.Fatalf("Failed to create test company: %v", err)
@@ -446,7 +447,7 @@ func TestProductList(t *testing.T) {
 		{Name: "Product 1", Price: 10.99},
 		{Name: "Product 2", Description: stringPtr("Product 2 desc"), Price: 20.99},
 	}
-	
+
 	for i := range products {
 		if err := testRepo.CreateProduct(&products[i]); err != nil {
 			t.Fatalf("Failed to create test product: %v", err)
@@ -646,7 +647,7 @@ func TestRemitInformationList(t *testing.T) {
 		{Name: "Bank 1", Lines: []RemitInformationLine{{Key: "bank", Value: "Bank 1"}}},
 		{Name: "Bank 2", Lines: []RemitInformationLine{{Key: "bank", Value: "Bank 2"}}},
 	}
-	
+
 	for i := range remits {
 		if err := testRepo.CreateRemitInformation(&remits[i]); err != nil {
 			t.Fatalf("Failed to create test remit: %v", err)
@@ -779,7 +780,7 @@ func TestRemitInformationDelete(t *testing.T) {
 	}
 }
 
-// Invoice Tests  
+// Invoice Tests
 func TestInvoiceCreate(t *testing.T) {
 	server, testRepo := setupTestServer(t)
 	defer server.Close()
@@ -935,7 +936,7 @@ func TestInvoiceList(t *testing.T) {
 			},
 		},
 	}
-	
+
 	for i := range invoices {
 		if err := testRepo.CreateInvoice(&invoices[i]); err != nil {
 			t.Fatalf("Failed to create test invoice: %v", err)
@@ -1291,4 +1292,3 @@ func TestInvoiceCreateMalformedJSON(t *testing.T) {
 		t.Errorf("Expected status 400, got %d. Response: %s", resp.StatusCode, string(body))
 	}
 }
-

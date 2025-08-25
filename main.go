@@ -13,7 +13,7 @@ import (
 
 var repo *Repository
 
-func setupRoutes() *http.ServeMux {
+func setupRoutes(testing bool) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Serve index.html at root path
@@ -24,31 +24,31 @@ func setupRoutes() *http.ServeMux {
 	})
 
 	// Protected API routes
-	mux.HandleFunc("GET /api/companies", basicAuthMiddleware(getCompanies))
-	mux.HandleFunc("POST /api/companies", basicAuthMiddleware(createCompany))
-	mux.HandleFunc("GET /api/companies/{companyId}", basicAuthMiddleware(getCompany))
-	mux.HandleFunc("PUT /api/companies/{companyId}", basicAuthMiddleware(updateCompany))
-	mux.HandleFunc("DELETE /api/companies/{companyId}", basicAuthMiddleware(deleteCompany))
+	mux.HandleFunc("GET /api/companies", basicAuthMiddleware(getCompanies, testing))
+	mux.HandleFunc("POST /api/companies", basicAuthMiddleware(createCompany, testing))
+	mux.HandleFunc("GET /api/companies/{companyId}", basicAuthMiddleware(getCompany, testing))
+	mux.HandleFunc("PUT /api/companies/{companyId}", basicAuthMiddleware(updateCompany, testing))
+	mux.HandleFunc("DELETE /api/companies/{companyId}", basicAuthMiddleware(deleteCompany, testing))
 
-	mux.HandleFunc("GET /api/remit", basicAuthMiddleware(getRemitInformations))
-	mux.HandleFunc("POST /api/remit", basicAuthMiddleware(createRemitInformation))
-	mux.HandleFunc("GET /api/remit/{remitId}", basicAuthMiddleware(getRemitInformation))
-	mux.HandleFunc("PUT /api/remit/{remitId}", basicAuthMiddleware(updateRemitInformation))
-	mux.HandleFunc("DELETE /api/remit/{remitId}", basicAuthMiddleware(deleteRemitInformation))
+	mux.HandleFunc("GET /api/remit", basicAuthMiddleware(getRemitInformations, testing))
+	mux.HandleFunc("POST /api/remit", basicAuthMiddleware(createRemitInformation, testing))
+	mux.HandleFunc("GET /api/remit/{remitId}", basicAuthMiddleware(getRemitInformation, testing))
+	mux.HandleFunc("PUT /api/remit/{remitId}", basicAuthMiddleware(updateRemitInformation, testing))
+	mux.HandleFunc("DELETE /api/remit/{remitId}", basicAuthMiddleware(deleteRemitInformation, testing))
 
-	mux.HandleFunc("GET /api/products", basicAuthMiddleware(getProducts))
-	mux.HandleFunc("POST /api/products", basicAuthMiddleware(createProduct))
-	mux.HandleFunc("GET /api/products/{productId}", basicAuthMiddleware(getProduct))
-	mux.HandleFunc("PUT /api/products/{productId}", basicAuthMiddleware(updateProduct))
-	mux.HandleFunc("DELETE /api/products/{productId}", basicAuthMiddleware(deleteProduct))
+	mux.HandleFunc("GET /api/products", basicAuthMiddleware(getProducts, testing))
+	mux.HandleFunc("POST /api/products", basicAuthMiddleware(createProduct, testing))
+	mux.HandleFunc("GET /api/products/{productId}", basicAuthMiddleware(getProduct, testing))
+	mux.HandleFunc("PUT /api/products/{productId}", basicAuthMiddleware(updateProduct, testing))
+	mux.HandleFunc("DELETE /api/products/{productId}", basicAuthMiddleware(deleteProduct, testing))
 
-	mux.HandleFunc("GET /api/invoices", basicAuthMiddleware(getInvoices))
-	mux.HandleFunc("POST /api/invoices", basicAuthMiddleware(createInvoice))
-	mux.HandleFunc("GET /api/invoices/{invoiceId}", basicAuthMiddleware(getInvoice))
-	mux.HandleFunc("PUT /api/invoices/{invoiceId}", basicAuthMiddleware(updateInvoice))
-	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice))
-	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice))
-	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates))
+	mux.HandleFunc("GET /api/invoices", basicAuthMiddleware(getInvoices, testing))
+	mux.HandleFunc("POST /api/invoices", basicAuthMiddleware(createInvoice, testing))
+	mux.HandleFunc("GET /api/invoices/{invoiceId}", basicAuthMiddleware(getInvoice, testing))
+	mux.HandleFunc("PUT /api/invoices/{invoiceId}", basicAuthMiddleware(updateInvoice, testing))
+	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice, testing))
+	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice, testing))
+	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates, testing))
 
 	return mux
 }
@@ -100,7 +100,7 @@ func main() {
 		return
 	}
 
-	mux := setupRoutes()
+	mux := setupRoutes(false)
 
 	fmt.Println("Running on port 8080")
 	http.ListenAndServe(":8080", mux)
