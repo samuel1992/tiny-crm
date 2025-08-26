@@ -196,7 +196,19 @@ func (r *Repository) CreateRemitInformation(remit *RemitInformation) error {
 }
 
 func (r *Repository) UpdateRemitInformation(remit *RemitInformation) error {
-	return r.db.Save(remit).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// First, delete existing remit lines
+		if err := tx.Where("remit_information_id = ?", remit.ID).Delete(&RemitInformationLine{}).Error; err != nil {
+			return err
+		}
+		
+		// Then save the remit information with new lines
+		if err := tx.Save(remit).Error; err != nil {
+			return err
+		}
+		
+		return nil
+	})
 }
 
 func (r *Repository) GetRemitInformations() ([]RemitInformation, error) {

@@ -439,8 +439,15 @@ func updateInvoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the updated invoice with all preloaded relationships
+	updatedInvoice, err := repo.GetInvoice(uint(invoiceId))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(invoice)
+	json.NewEncoder(w).Encode(updatedInvoice)
 }
 
 func deleteInvoice(w http.ResponseWriter, r *http.Request) {

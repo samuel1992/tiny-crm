@@ -273,6 +273,7 @@
                     <input 
                       type="text" 
                       x-model="editingCompany ? editCompany.name : newCompany.name"
+                      x-ref="editCompanyName"
                       required
                       class="form-input focus:ring-blue-500"
                       placeholder="Enter company name"
@@ -283,6 +284,7 @@
                     <input 
                       type="text" 
                       x-model="editingCompany ? editCompany.document : newCompany.document"
+                      x-ref="editCompanyDocument"
                       required
                       class="form-input focus:ring-blue-500"
                       placeholder="XX.XXX.XXX/XXXX-XX"
@@ -292,6 +294,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Address *</label>
                     <textarea 
                       x-model="editingCompany ? editCompany.address : newCompany.address"
+                      x-ref="editCompanyAddress"
                       required
                       rows="3"
                       class="form-input focus:ring-blue-500"
@@ -388,6 +391,7 @@
                     <input 
                       type="text" 
                       x-model="editingProduct ? editProduct.name : newProduct.name"
+                      x-ref="editProductName"
                       required
                       class="form-input focus:ring-green-500"
                       placeholder="Enter product name"
@@ -397,6 +401,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea 
                       x-model="editingProduct ? editProduct.description : newProduct.description"
+                      x-ref="editProductDesc"
                       rows="2"
                       class="form-input focus:ring-green-500"
                       placeholder="Enter product description (optional)"
@@ -407,6 +412,7 @@
                     <input 
                       type="number" 
                       x-model="editingProduct ? editProduct.price : newProduct.price"
+                      x-ref="editProductPrice"
                       step="0.01"
                       min="0"
                       required
@@ -506,6 +512,7 @@
                     <input 
                       type="text" 
                       x-model="editingRemit ? editRemit.name : newRemit.name"
+                      x-ref="editRemitName"
                       required
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                       placeholder="Enter remit information name"
@@ -641,6 +648,7 @@
                     <input 
                       type="number" 
                       x-model="editingInvoice ? editInvoice.number : newInvoice.number"
+                      x-ref="editInvoiceNumber"
                       class="form-input focus:ring-yellow-500"
                       placeholder="Leave empty for auto-generation"
                     >
@@ -650,6 +658,7 @@
                     <input 
                       type="date" 
                       x-model="editingInvoice ? editInvoice.due_date : newInvoice.due_date"
+                      x-ref="editInvoiceDueDate"
                       required
                       class="form-input focus:ring-yellow-500"
                     >
@@ -658,6 +667,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Company *</label>
                     <select 
                       x-model="editingInvoice ? editInvoice.company_id : newInvoice.company_id"
+                      x-ref="editInvoiceCompany"
                       required
                       class="form-input focus:ring-yellow-500"
                     >
@@ -671,6 +681,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Client *</label>
                     <select 
                       x-model="editingInvoice ? editInvoice.client_id : newInvoice.client_id"
+                      x-ref="editInvoiceClient"
                       required
                       class="form-input focus:ring-yellow-500"
                     >
@@ -684,6 +695,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Remit Information *</label>
                     <select 
                       x-model="editingInvoice ? editInvoice.remit_information_id : newInvoice.remit_information_id"
+                      x-ref="editInvoiceRemit"
                       required
                       class="form-input focus:ring-yellow-500"
                     >
@@ -698,6 +710,7 @@
                     <input 
                       type="number" 
                       x-model="editingInvoice ? editInvoice.discount : newInvoice.discount"
+                      x-ref="editInvoiceDiscount"
                       step="0.01"
                       min="0"
                       class="form-input focus:ring-yellow-500"
@@ -709,6 +722,7 @@
                     <input 
                       type="number" 
                       x-model="editingInvoice ? editInvoice.penalty : newInvoice.penalty"
+                      x-ref="editInvoicePenalty"
                       step="0.01"
                       min="0"
                       class="form-input focus:ring-yellow-500"
@@ -732,6 +746,7 @@
                   <label class="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
                   <textarea 
                     x-model="editingInvoice ? editInvoice.additional_information : newInvoice.additional_information"
+                    x-ref="editInvoiceAdditionalInfo"
                     rows="2"
                     class="form-input focus:ring-yellow-500"
                     placeholder="Optional additional information"
@@ -1141,18 +1156,36 @@
             this.editingCompany = null;
           },
 
-          startEditingCompany(company) {
-            this.editingCompany = company;
-            this.editCompany = { 
-              name: company.name, 
-              document: company.document, 
-              address: company.address 
-            };
-            this.showCompanyForm = true;
-            // Hide other forms
-            this.showProductForm = false;
-            this.showRemitForm = false;
-            this.showInvoiceForm = false;
+          async startEditingCompany(company) {
+            this.loading = true;
+            
+            try {
+              // Fetch fresh company data from API
+              const response = await fetch(`/api/companies/${company.id}`);
+              if (!response.ok) {
+                alert('Error fetching company details');
+                return;
+              }
+              
+              const freshCompany = await response.json();
+              
+              this.editingCompany = freshCompany;
+              // Update properties individually to maintain Alpine.js reactivity
+              this.editCompany.name = freshCompany.name;
+              this.editCompany.document = freshCompany.document;
+              this.editCompany.address = freshCompany.address;
+              this.showCompanyForm = true;
+              // Hide other forms
+              this.showProductForm = false;
+              this.showRemitForm = false;
+              this.showInvoiceForm = false;
+              
+            } catch (error) {
+              console.error('Error fetching company details:', error);
+              alert('Error fetching company details: ' + error.message);
+            } finally {
+              this.loading = false;
+            }
           },
 
           cancelEditCompany() {
@@ -1193,19 +1226,37 @@
             this.editingRemit = null;
           },
 
-          startEditingRemit(remit) {
-            this.editingRemit = remit;
-            this.editRemit = { 
-              name: remit.name, 
-              lines: remit.lines && remit.lines.length > 0 
-                ? remit.lines.map(line => ({ key: line.key, value: line.value }))
-                : [{ key: '', value: '' }]
-            };
-            this.showRemitForm = true;
-            // Hide other forms
-            this.showCompanyForm = false;
-            this.showProductForm = false;
-            this.showInvoiceForm = false;
+          async startEditingRemit(remit) {
+            this.loading = true;
+            
+            try {
+              // Fetch fresh remit data from API
+              const response = await fetch(`/api/remit/${remit.id}`);
+              if (!response.ok) {
+                alert('Error fetching remit details');
+                return;
+              }
+              
+              const freshRemit = await response.json();
+              
+              this.editingRemit = freshRemit;
+              // Update properties individually to maintain Alpine.js reactivity
+              this.editRemit.name = freshRemit.name;
+              this.editRemit.lines = freshRemit.lines && freshRemit.lines.length > 0 
+                ? freshRemit.lines.map(line => ({ key: line.key, value: line.value }))
+                : [{ key: '', value: '' }];
+              this.showRemitForm = true;
+              // Hide other forms
+              this.showCompanyForm = false;
+              this.showProductForm = false;
+              this.showInvoiceForm = false;
+              
+            } catch (error) {
+              console.error('Error fetching remit details:', error);
+              alert('Error fetching remit details: ' + error.message);
+            } finally {
+              this.loading = false;
+            }
           },
 
           cancelEditRemit() {
@@ -1371,7 +1422,24 @@
           // =============================================
 
           async updateCompany() {
-            if (!this.editCompany.name || !this.editCompany.document || !this.editCompany.address) {
+            // Get current values from form inputs
+            const nameInput = this.$refs.editCompanyName;
+            const documentInput = this.$refs.editCompanyDocument;
+            const addressInput = this.$refs.editCompanyAddress;
+            
+            if (!nameInput || !documentInput || !addressInput) {
+              console.error('Form refs not found');
+              alert('Form error - please try again');
+              return;
+            }
+            
+            const formData = {
+              name: nameInput.value.trim(),
+              document: documentInput.value.trim(),
+              address: addressInput.value.trim()
+            };
+            
+            if (!formData.name || !formData.document || !formData.address) {
               alert('Please fill in all required fields');
               return;
             }
@@ -1380,7 +1448,7 @@
               const response = await fetch(`/api/companies/${this.editingCompany.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.editCompany)
+                body: JSON.stringify(formData)
               });
 
               if (response.ok) {
@@ -1408,12 +1476,9 @@
             try {
               const productData = {
                 name: this.newProduct.name,
-                price: parseFloat(this.newProduct.price)
+                price: parseFloat(this.newProduct.price),
+                description: this.newProduct.description.trim() || null
               };
-              
-              if (this.newProduct.description.trim()) {
-                productData.description = this.newProduct.description;
-              }
 
               const response = await fetch('/api/products', {
                 method: 'POST',
@@ -1435,25 +1500,37 @@
           },
 
           async updateProduct() {
-            if (!this.editProduct.name || this.editProduct.price <= 0) {
+            
+            // Get the current values from the form inputs
+            const nameInput = this.$refs.editProductName;
+            const descInput = this.$refs.editProductDesc;
+            const priceInput = this.$refs.editProductPrice;
+            
+            
+            if (!nameInput || !descInput || !priceInput) {
+              console.error('Form refs not found');
+              alert('Form error - please try again');
+              return;
+            }
+            
+            const formData = {
+              name: nameInput.value.trim(),
+              description: descInput.value.trim() || null,
+              price: parseFloat(priceInput.value)
+            };
+            
+            
+            if (!formData.name || formData.price <= 0) {
               alert('Please fill in all required fields');
               return;
             }
 
             try {
-              const productData = {
-                name: this.editProduct.name,
-                price: parseFloat(this.editProduct.price)
-              };
-              
-              if (this.editProduct.description.trim()) {
-                productData.description = this.editProduct.description;
-              }
 
               const response = await fetch(`/api/products/${this.editingProduct.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productData)
+                body: JSON.stringify(formData)
               });
 
               if (response.ok) {
@@ -1499,7 +1576,21 @@
           },
 
           async updateRemit() {
-            if (!this.editRemit.name || this.editRemit.lines.some(line => !line.key || !line.value)) {
+            // Get name from form input
+            const nameInput = this.$refs.editRemitName;
+            
+            if (!nameInput) {
+              console.error('Form ref not found');
+              alert('Form error - please try again');
+              return;
+            }
+            
+            const formData = {
+              name: nameInput.value.trim(),
+              lines: this.editRemit.lines // Keep using the bound lines array as it works
+            };
+            
+            if (!formData.name || formData.lines.some(line => !line.key || !line.value)) {
               alert('Please fill in all required fields');
               return;
             }
@@ -1508,7 +1599,7 @@
               const response = await fetch(`/api/remit/${this.editingRemit.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.editRemit)
+                body: JSON.stringify(formData)
               });
 
               if (response.ok) {
@@ -1571,22 +1662,47 @@
           },
 
           async updateInvoice() {
-            if (!this.editInvoice.due_date || !this.editInvoice.company_id || !this.editInvoice.client_id || !this.editInvoice.remit_information_id) {
+            // Get current values from form inputs
+            const numberInput = this.$refs.editInvoiceNumber;
+            const dueDateInput = this.$refs.editInvoiceDueDate;
+            const companyInput = this.$refs.editInvoiceCompany;
+            const clientInput = this.$refs.editInvoiceClient;
+            const remitInput = this.$refs.editInvoiceRemit;
+            const discountInput = this.$refs.editInvoiceDiscount;
+            const penaltyInput = this.$refs.editInvoicePenalty;
+            const additionalInfoInput = this.$refs.editInvoiceAdditionalInfo;
+            
+            if (!numberInput || !dueDateInput || !companyInput || !clientInput || !remitInput || !discountInput || !penaltyInput || !additionalInfoInput) {
+              console.error('Form refs not found');
+              alert('Form error - please try again');
+              return;
+            }
+            
+            const formData = {
+              number: numberInput.value ? parseInt(numberInput.value) : null,
+              due_date: dueDateInput.value,
+              company_id: companyInput.value,
+              client_id: clientInput.value,
+              remit_information_id: remitInput.value,
+              discount: parseFloat(discountInput.value) || 0,
+              penalty: parseFloat(penaltyInput.value) || 0,
+              additional_information: additionalInfoInput.value.trim() || null,
+              paid: this.editInvoice.paid || false, // Keep using bound data for paid status
+              invoice_lines: this.editInvoice.invoice_lines // Keep using bound data for lines
+            };
+            
+            if (!formData.due_date || !formData.company_id || !formData.client_id || !formData.remit_information_id) {
               alert('Please fill in all required fields');
               return;
             }
 
             try {
               const invoiceData = {
-                ...this.editInvoice,
-                number: this.editInvoice.number ? parseInt(this.editInvoice.number) : null,
-                discount: parseFloat(this.editInvoice.discount) || 0,
-                penalty: parseFloat(this.editInvoice.penalty) || 0,
-                paid: this.editInvoice.paid || false,
-                due_date: new Date(this.editInvoice.due_date).toISOString(),
-                remit_information_id: parseInt(this.editInvoice.remit_information_id),
-                company_id: parseInt(this.editInvoice.company_id),
-                client_id: parseInt(this.editInvoice.client_id),
+                ...formData,
+                due_date: new Date(formData.due_date).toISOString(),
+                remit_information_id: parseInt(formData.remit_information_id),
+                company_id: parseInt(formData.company_id),
+                client_id: parseInt(formData.client_id),
                 invoice_lines: this.editInvoice.invoice_lines.map(line => ({
                   product_id: parseInt(line.product_id),
                   quantity: parseInt(line.quantity),
