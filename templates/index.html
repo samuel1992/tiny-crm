@@ -886,14 +886,21 @@
                             <div class="text-sm text-gray-600 mb-1 pl-2 border-l-2 border-gray-200">
                               <div class="flex justify-between items-start">
                                 <span x-text="line.product?.name || 'Unknown Product'"></span>
-                                <span class="text-xs text-gray-500">Qty: <span x-text="line.quantity"></span></span>
+                                <span class="text-xs text-gray-500">
+                                  <span x-text="line.quantity"></span> x $<span x-text="(line.product?.price || 0).toFixed(2)"></span>
+                                  = $<span x-text="((line.product?.price || 0) * (line.quantity || 0)).toFixed(2)"></span>
+                                </span>
                               </div>
-                              <p x-show="line.description && line.description.trim()" 
-                                 x-text="line.description" 
+                              <p x-show="line.description && line.description.trim()"
+                                 x-text="line.description"
                                  class="text-xs text-gray-500 mt-1 italic">
                               </p>
                             </div>
                           </template>
+                          <div class="text-sm font-medium text-gray-800 mt-2 pt-1 border-t border-gray-200 flex justify-between">
+                            <span>Total:</span>
+                            <span>$<span x-text="(invoice.invoice_lines.reduce((sum, line) => sum + (line.product?.price || 0) * (line.quantity || 0), 0) - (invoice.discount || 0) + (invoice.penalty || 0)).toFixed(2)"></span></span>
+                          </div>
                         </div>
                       </div>
                       <div class="entity-actions">

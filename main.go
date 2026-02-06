@@ -396,9 +396,16 @@ func createInvoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the created invoice with all preloaded relationships
+	createdInvoice, err := repo.GetInvoice(invoice.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(invoice)
+	json.NewEncoder(w).Encode(createdInvoice)
 }
 
 func getInvoice(w http.ResponseWriter, r *http.Request) {
