@@ -41,6 +41,8 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Repository) {
 		&Company{},
 		&Invoice{},
 		&InvoiceLine{},
+		&RecurringInvoice{},
+		&RecurringInvoiceLine{},
 	)
 	if err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
@@ -133,6 +135,10 @@ func createTestData(testRepo *Repository) (companyID, productID, remitID uint, e
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+func timePtr(t time.Time) *time.Time {
+	return &t
 }
 
 func intPtr(i int) *int {
@@ -1357,5 +1363,434 @@ func TestInvoiceCreateMalformedJSON(t *testing.T) {
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+}
+
+// --- Recurring invoices ---
+
+func seedRecurringTemplate(t *testing.T, repo *Repository, generateOnDay int, rule string, dayOfMonth *int, nextMonth bool) (*RecurringInvoice, uint) {
+	t.Helper()
+	companyID, productID, remitID, err := createTestData(repo)
+	if err != nil {
+		t.Fatalf("seed prerequisites: %v", err)
+	}
+	ri := &RecurringInvoice{
+		Name:               "Monthly Test",
+		IsActive:           true,
+		GenerateOnDay:      generateOnDay,
+		DueDateRule:        rule,
+		DueDayOfMonth:      dayOfMonth,
+		DueDayInNextMonth:  nextMonth,
+		CompanyID:          companyID,
+		ClientID:           companyID,
+		RemitInformationID: remitID,
+		BaseDiscount:       0,
+		BasePenalty:        0,
+		Lines: []RecurringInvoiceLine{
+			{ProductID: productID, Quantity: 2, Description: stringPtr("recurring line")},
+		},
+	}
+	if err := repo.CreateRecurringInvoice(ri); err != nil {
+		t.Fatalf("create recurring template: %v", err)
+	}
+	return ri, productID
+}
+
+func TestCalculateDueDate(t *testing.T) {
+	loc := time.UTC
+
+	cases := []struct {
+		name      string
+		issue     time.Time
+		rule      string
+		day       *int
+		nextMonth bool
+		want      time.Time
+	}{
+		{
+			name:  "end of January",
+			issue: time.Date(2026, 1, 5, 0, 0, 0, 0, loc),
+			rule:  DueRuleEndOfMonth,
+			want:  time.Date(2026, 1, 31, 0, 0, 0, 0, loc),
+		},
+		{
+			name:  "end of February non-leap",
+			issue: time.Date(2026, 2, 10, 0, 0, 0, 0, loc),
+			rule:  DueRuleEndOfMonth,
+			want:  time.Date(2026, 2, 28, 0, 0, 0, 0, loc),
+		},
+		{
+			name:  "end of December rolls to year end",
+			issue: time.Date(2026, 12, 1, 0, 0, 0, 0, loc),
+			rule:  DueRuleEndOfMonth,
+			want:  time.Date(2026, 12, 31, 0, 0, 0, 0, loc),
+		},
+		{
+			name:  "end of next month from December",
+			issue: time.Date(2026, 12, 15, 0, 0, 0, 0, loc),
+			rule:  DueRuleEndOfNextMonth,
+			want:  time.Date(2027, 1, 31, 0, 0, 0, 0, loc),
+		},
+		{
+			name:  "end of next month from May",
+			issue: time.Date(2026, 5, 15, 0, 0, 0, 0, loc),
+			rule:  DueRuleEndOfNextMonth,
+			want:  time.Date(2026, 6, 30, 0, 0, 0, 0, loc),
+		},
+		{
+			name:  "day of current month",
+			issue: time.Date(2026, 5, 1, 0, 0, 0, 0, loc),
+			rule:  DueRuleDayOfMonth,
+			day:   intPtr(15),
+			want:  time.Date(2026, 5, 15, 0, 0, 0, 0, loc),
+		},
+		{
+			name:      "day of next month from December",
+			issue:     time.Date(2026, 12, 20, 0, 0, 0, 0, loc),
+			rule:      DueRuleDayOfMonth,
+			day:       intPtr(10),
+			nextMonth: true,
+			want:      time.Date(2027, 1, 10, 0, 0, 0, 0, loc),
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := calculateDueDate(c.issue, c.rule, c.day, c.nextMonth)
+			if !got.Equal(c.want) {
+				t.Errorf("got %s, want %s", got.Format(time.RFC3339), c.want.Format(time.RFC3339))
+			}
+		})
+	}
+}
+
+func TestGenerateDueRecurringInvoices_CreatesInvoice(t *testing.T) {
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	template, productID := seedRecurringTemplate(t, testRepo, now.Day(), DueRuleEndOfNextMonth, nil, false)
+
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator returned error: %v", err)
+	}
+	if len(generated) != 1 {
+		t.Fatalf("expected 1 invoice generated, got %d", len(generated))
+	}
+
+	inv := generated[0]
+	if inv.ID == 0 {
+		t.Error("generated invoice should have an ID")
+	}
+	if !inv.IssueDate.Equal(now) {
+		t.Errorf("issue date %s != now %s", inv.IssueDate, now)
+	}
+	wantDue := time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC)
+	if !inv.DueDate.Equal(wantDue) {
+		t.Errorf("due date %s != %s", inv.DueDate, wantDue)
+	}
+	if len(inv.InvoiceLines) != 1 {
+		t.Fatalf("expected 1 line, got %d", len(inv.InvoiceLines))
+	}
+	if inv.InvoiceLines[0].ProductID != productID {
+		t.Errorf("line product id mismatch")
+	}
+	if inv.InvoiceLines[0].Quantity != 2 {
+		t.Errorf("line quantity = %d, want 2", inv.InvoiceLines[0].Quantity)
+	}
+
+	reloaded, err := testRepo.GetRecurringInvoice(template.ID)
+	if err != nil {
+		t.Fatalf("reload template: %v", err)
+	}
+	if reloaded.LastGeneratedAt == nil {
+		t.Error("LastGeneratedAt should be set")
+	}
+}
+
+func setLastGenerated(t *testing.T, repo *Repository, id uint, when time.Time) {
+	t.Helper()
+	if err := repo.db.Model(&RecurringInvoice{}).Where("id = ?", id).
+		Update("last_generated_at", when).Error; err != nil {
+		t.Fatalf("set last_generated_at: %v", err)
+	}
+}
+
+func TestGenerateDueRecurringInvoices_Dedup(t *testing.T) {
+	// Month-precision dedup: a second pass on a *different day same month*
+	// must still skip.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	first := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	seedRecurringTemplate(t, testRepo, first.Day(), DueRuleEndOfMonth, nil, false)
+
+	if _, err := testRepo.GenerateDueRecurringInvoices(first); err != nil {
+		t.Fatalf("first pass: %v", err)
+	}
+	later := time.Date(2026, 5, 12, 8, 0, 0, 0, time.UTC) // 2 days later, same month
+	second, err := testRepo.GenerateDueRecurringInvoices(later)
+	if err != nil {
+		t.Fatalf("second pass: %v", err)
+	}
+	if len(second) != 0 {
+		t.Errorf("month dedup failed: second pass produced %d invoices", len(second))
+	}
+
+	all, _ := testRepo.GetInvoices()
+	if len(all) != 1 {
+		t.Errorf("expected 1 invoice in DB after dedup, got %d", len(all))
+	}
+}
+
+func TestGenerateDueRecurringInvoices_SkipsInactive(t *testing.T) {
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	template, _ := seedRecurringTemplate(t, testRepo, now.Day(), DueRuleEndOfMonth, nil, false)
+	template.IsActive = false
+	if err := testRepo.UpdateRecurringInvoice(template); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 0 {
+		t.Errorf("expected 0, got %d", len(generated))
+	}
+}
+
+func TestGenerateDueRecurringInvoices_SkipsWhenScheduledDayNotReached(t *testing.T) {
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	seedRecurringTemplate(t, testRepo, 25, DueRuleEndOfMonth, nil, false) // day 25 still in the future
+
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 0 {
+		t.Errorf("expected 0 (scheduled day not reached), got %d", len(generated))
+	}
+}
+
+func TestGenerateDueRecurringInvoices_CatchesUpAfterMissedDay(t *testing.T) {
+	// generate_on_day=1 but app didn't run on day 1; today is day 5; LastGeneratedAt is nil.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 5, 8, 0, 0, 0, time.UTC)
+	template, _ := seedRecurringTemplate(t, testRepo, 1, DueRuleEndOfMonth, nil, false)
+
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 1 {
+		t.Fatalf("expected 1 catch-up invoice, got %d", len(generated))
+	}
+
+	reloaded, err := testRepo.GetRecurringInvoice(template.ID)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if reloaded.LastGeneratedAt == nil || reloaded.LastGeneratedAt.Month() != 5 {
+		t.Errorf("LastGeneratedAt should be set to May, got %v", reloaded.LastGeneratedAt)
+	}
+}
+
+func TestGenerateDueRecurringInvoices_RegeneratesNextMonth(t *testing.T) {
+	// Already generated last month; new month should regenerate.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	template, _ := seedRecurringTemplate(t, testRepo, 1, DueRuleEndOfMonth, nil, false)
+	setLastGenerated(t, testRepo, template.ID, time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC))
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 1 {
+		t.Fatalf("expected 1 invoice in new month, got %d", len(generated))
+	}
+}
+
+func TestGenerateDueRecurringInvoices_SkipsWhenAlreadyGeneratedThisMonth(t *testing.T) {
+	// Already generated earlier this month; subsequent pass must skip.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	template, _ := seedRecurringTemplate(t, testRepo, 1, DueRuleEndOfMonth, nil, false)
+	setLastGenerated(t, testRepo, template.ID, time.Date(2026, 5, 3, 0, 0, 0, 0, time.UTC))
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 0 {
+		t.Errorf("expected 0 (already generated this month), got %d", len(generated))
+	}
+}
+
+func TestGenerateDueRecurringInvoices_EndOfMonthCap_ShortMonth(t *testing.T) {
+	// generate_on_day=31 in February (28 days). Should still fire on Feb 28.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 2, 28, 8, 0, 0, 0, time.UTC) // Feb 2026 has 28 days
+	seedRecurringTemplate(t, testRepo, 31, DueRuleEndOfMonth, nil, false)
+
+	generated, err := testRepo.GenerateDueRecurringInvoices(now)
+	if err != nil {
+		t.Fatalf("generator: %v", err)
+	}
+	if len(generated) != 1 {
+		t.Fatalf("expected 1 invoice (EOM cap), got %d", len(generated))
+	}
+	wantDue := time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)
+	if !generated[0].DueDate.Equal(wantDue) {
+		t.Errorf("due date %s != %s", generated[0].DueDate, wantDue)
+	}
+}
+
+func TestGenerateOne_AtomicClaim(t *testing.T) {
+	// Two back-to-back calls with identical inputs must produce exactly one invoice.
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	template, _ := seedRecurringTemplate(t, testRepo, 1, DueRuleEndOfMonth, nil, false)
+
+	inv1, err := testRepo.GenerateRecurringInvoiceNow(template.ID, now)
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	if inv1 == nil {
+		t.Fatal("first call should produce an invoice")
+	}
+
+	inv2, err := testRepo.GenerateRecurringInvoiceNow(template.ID, now)
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if inv2 != nil {
+		t.Error("second call should be rejected by atomic claim")
+	}
+
+	all, _ := testRepo.GetInvoices()
+	if len(all) != 1 {
+		t.Errorf("expected exactly 1 invoice, got %d", len(all))
+	}
+}
+
+func TestShouldGenerateThisMonth(t *testing.T) {
+	loc := time.UTC
+
+	cases := []struct {
+		name      string
+		genDay    int
+		lastGen   *time.Time
+		now       time.Time
+		want      bool
+	}{
+		{
+			name:   "scheduled day not yet reached",
+			genDay: 25,
+			now:    time.Date(2026, 5, 10, 0, 0, 0, 0, loc),
+			want:   false,
+		},
+		{
+			name:   "scheduled day reached, never generated",
+			genDay: 5,
+			now:    time.Date(2026, 5, 10, 0, 0, 0, 0, loc),
+			want:   true,
+		},
+		{
+			name:    "already generated this month",
+			genDay:  1,
+			lastGen: timePtr(time.Date(2026, 5, 3, 0, 0, 0, 0, loc)),
+			now:     time.Date(2026, 5, 10, 0, 0, 0, 0, loc),
+			want:    false,
+		},
+		{
+			name:    "generated previous month, due now",
+			genDay:  1,
+			lastGen: timePtr(time.Date(2026, 4, 15, 0, 0, 0, 0, loc)),
+			now:     time.Date(2026, 5, 10, 0, 0, 0, 0, loc),
+			want:    true,
+		},
+		{
+			name:   "EOM cap: gen_day=31 on Feb 28 (last day of Feb)",
+			genDay: 31,
+			now:    time.Date(2026, 2, 28, 0, 0, 0, 0, loc),
+			want:   true,
+		},
+		{
+			name:   "EOM cap: gen_day=31 on Feb 27 (not yet last day)",
+			genDay: 31,
+			now:    time.Date(2026, 2, 27, 0, 0, 0, 0, loc),
+			want:   false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ri := &RecurringInvoice{
+				GenerateOnDay:   c.genDay,
+				LastGeneratedAt: c.lastGen,
+			}
+			got := shouldGenerateThisMonth(ri, c.now)
+			if got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestGenerateRecurringInvoiceNow_ManualTrigger(t *testing.T) {
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	now := time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)
+	template, _ := seedRecurringTemplate(t, testRepo, 1, DueRuleDayOfMonth, intPtr(15), false)
+
+	inv, err := testRepo.GenerateRecurringInvoiceNow(template.ID, now)
+	if err != nil {
+		t.Fatalf("manual trigger: %v", err)
+	}
+	if inv == nil {
+		t.Fatal("expected an invoice, got nil")
+	}
+	wantDue := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	if !inv.DueDate.Equal(wantDue) {
+		t.Errorf("due date %s != %s", inv.DueDate, wantDue)
+	}
+
+	// Same-day re-trigger: dedup hits.
+	again, err := testRepo.GenerateRecurringInvoiceNow(template.ID, now)
+	if err != nil {
+		t.Fatalf("second manual trigger: %v", err)
+	}
+	if again != nil {
+		t.Error("expected nil on same-day dedup, got an invoice")
+	}
+
+	// Different-day-same-month re-trigger: still month-deduped.
+	later := time.Date(2026, 5, 20, 9, 0, 0, 0, time.UTC)
+	stillSameMonth, err := testRepo.GenerateRecurringInvoiceNow(template.ID, later)
+	if err != nil {
+		t.Fatalf("third manual trigger: %v", err)
+	}
+	if stillSameMonth != nil {
+		t.Error("expected nil on month dedup (different day, same month), got an invoice")
 	}
 }
