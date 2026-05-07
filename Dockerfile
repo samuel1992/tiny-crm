@@ -11,6 +11,5 @@ ENV TZ=America/Sao_Paulo
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /app/tinycrm ./
-COPY --from=builder /app/templates ./templates
 EXPOSE 8080
 CMD ["./tinycrm"]

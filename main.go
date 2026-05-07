@@ -1,15 +1,20 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 )
+
+//go:embed templates
+var templatesFS embed.FS
 
 var repo *Repository
 var PORT = "8080"
@@ -20,7 +25,7 @@ func setupRoutes(testing bool) *http.ServeMux {
 	// Serve index.html at root path
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			http.ServeFile(w, r, "templates/index.html")
+			http.ServeFileFS(w, r, templatesFS, "templates/index.html")
 		}
 	})
 
@@ -477,7 +482,7 @@ func deleteInvoice(w http.ResponseWriter, r *http.Request) {
 }
 
 func listTemplates(w http.ResponseWriter, r *http.Request) {
-	dirs, err := os.ReadDir("templates/invoices")
+	dirs, err := fs.ReadDir(templatesFS, "templates/invoices")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -521,7 +526,7 @@ func openInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmplPath := filepath.Join("templates", "invoices", templateName)
-	tmpl, err := template.ParseFiles(tmplPath)
+	tmpl, err := template.ParseFS(templatesFS, tmplPath)
 	if err != nil {
 		log.Printf("Error parsing template %s: %v", tmplPath, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
