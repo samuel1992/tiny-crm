@@ -63,6 +63,9 @@ func main() {
 	}
 	repo.Migrate()
 
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		PORT = envPort
+	}
 	if len(os.Args) >= 2 && os.Args[1] == "--port" {
 		PORT = os.Args[2]
 	}

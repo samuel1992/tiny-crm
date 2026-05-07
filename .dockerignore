@@ -1,0 +1,15 @@
+.git
+.gitignore
+.claude
+.kamal
+config
+*.db
+*.db-shm
+*.db-wal
+tinycrm
+tinycrm-*
+README.md
+CLAUDE.md
+tiny-crm.service
+build-linux.sh
+*_test.go

@@ -3,3 +3,9 @@ templates/invoices/*
 !templates/invoices/default_*
 tinycrm
 tinycrm-*
+
+# Deployment / secrets (public repo — keep infra details out)
+.kamal/
+config/
+.env
+.env.*

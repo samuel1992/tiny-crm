@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,12 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var DATABASE_FILE = "tinycrm.db"
+var DATABASE_FILE = func() string {
+	if path := os.Getenv("DB_PATH"); path != "" {
+		return path
+	}
+	return "tinycrm.db"
+}()
 
 var monthsInPortuguese = map[string]string{
 	"January":   "Janeiro",
@@ -146,7 +152,7 @@ func NewRepository() (*Repository, error) {
 func NewRepositoryWithDB(db *gorm.DB) (*Repository, error) {
 	if db == nil {
 		var err error
-		db, err = gorm.Open(sqlite.Open("tinycrm.db"), &gorm.Config{})
+		db, err = gorm.Open(sqlite.Open(DATABASE_FILE), &gorm.Config{})
 		if err != nil {
 			return nil, err
 		}
