@@ -63,7 +63,7 @@
         overflow-y: auto;
       }
       .invoices-section .entity-list {
-        max-height: 38rem;
+        max-height: calc(100vh - 14rem);
       }
       .entity-card {
         border: 1px solid rgb(229 231 235);
@@ -240,12 +240,15 @@
       <!-- =============================================== -->
       <!-- MAIN DASHBOARD CONTENT                       -->
       <!-- =============================================== -->
-      <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main class="w-full px-4 sm:px-6 lg:px-8 py-8">
 
         <!-- =============================================== -->
-        <!-- TOP ROW: Companies, Products, Remit, Recurring -->
+        <!-- TWO-COLUMN LAYOUT: left = stacked boxes, right = invoices -->
         <!-- =============================================== -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+
+          <!-- LEFT: Companies, Products, Remit, Recurring (stacked) -->
+          <div class="space-y-6 xl:col-span-1">
 
           <!-- =============================================== -->
           <!-- COMPANIES CRUD SECTION                       -->
@@ -626,12 +629,12 @@
           <section class="crud-section">
             <div class="section-header">
               <h2 class="section-title">
-                <svg class="section-icon text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="section-icon text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 5a1 1 0 011-1h4a1 1 0 010 2H8a1 1 0 01-1-1zm0 4a1 1 0 011-1h4a1 1 0 010 2H8a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H8z" clip-rule="evenodd"/>
                 </svg>
                 Recurring (<span x-text="recurringInvoices.length"></span>)
               </h2>
-              <button @click="showRecurringForm = !showRecurringForm" class="add-button bg-purple-600 hover:bg-purple-700">
+              <button @click="showRecurringForm = !showRecurringForm" class="add-button bg-orange-600 hover:bg-orange-700">
                 <span x-show="!showRecurringForm">+ Add</span>
                 <span x-show="showRecurringForm">Cancel</span>
               </button>
@@ -642,19 +645,19 @@
                 <div class="grid grid-cols-1 gap-3">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                    <input type="text" x-model="recurringForm.name" required class="form-input focus:ring-purple-500" placeholder="e.g. Monthly — Acme Corp">
+                    <input type="text" x-model="recurringForm.name" required class="form-input focus:ring-orange-500" placeholder="e.g. Monthly — Acme Corp">
                   </div>
                   <div class="flex items-center gap-2">
-                    <input type="checkbox" id="recurring-active" x-model="recurringForm.is_active" class="h-4 w-4 text-purple-600">
+                    <input type="checkbox" id="recurring-active" x-model="recurringForm.is_active" class="h-4 w-4 text-orange-600">
                     <label for="recurring-active" class="text-sm font-medium text-gray-700">Active</label>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Generate on day *</label>
-                    <input type="number" min="1" max="31" x-model.number="recurringForm.generate_on_day" required class="form-input focus:ring-purple-500" placeholder="1-31">
+                    <input type="number" min="1" max="31" x-model.number="recurringForm.generate_on_day" required class="form-input focus:ring-orange-500" placeholder="1-31">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Due date rule *</label>
-                    <select x-model="recurringForm.due_date_rule" required class="form-input focus:ring-purple-500">
+                    <select x-model="recurringForm.due_date_rule" required class="form-input focus:ring-orange-500">
                       <option value="END_OF_MONTH">End of current month</option>
                       <option value="END_OF_NEXT_MONTH">End of next month</option>
                       <option value="DAY_OF_MONTH">Specific day of month</option>
@@ -663,72 +666,72 @@
                   <template x-if="recurringForm.due_date_rule === 'DAY_OF_MONTH'">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Due day of month *</label>
-                      <input type="number" min="1" max="31" x-model.number="recurringForm.due_day_of_month" class="form-input focus:ring-purple-500" placeholder="1-31">
+                      <input type="number" min="1" max="31" x-model.number="recurringForm.due_day_of_month" class="form-input focus:ring-orange-500" placeholder="1-31">
                     </div>
                   </template>
                   <template x-if="recurringForm.due_date_rule === 'DAY_OF_MONTH'">
                     <div class="flex items-center gap-2">
-                      <input type="checkbox" id="recurring-next-month" x-model="recurringForm.due_day_in_next_month" class="h-4 w-4 text-purple-600">
+                      <input type="checkbox" id="recurring-next-month" x-model="recurringForm.due_day_in_next_month" class="h-4 w-4 text-orange-600">
                       <label for="recurring-next-month" class="text-sm font-medium text-gray-700">Land in next month</label>
                     </div>
                   </template>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Company *</label>
-                    <select x-model="recurringForm.company_id" required class="form-input focus:ring-purple-500">
+                    <select x-model="recurringForm.company_id" required class="form-input focus:ring-orange-500">
                       <option value="">Select company</option>
                       <template x-for="c in companies" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
                     </select>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Client *</label>
-                    <select x-model="recurringForm.client_id" required class="form-input focus:ring-purple-500">
+                    <select x-model="recurringForm.client_id" required class="form-input focus:ring-orange-500">
                       <option value="">Select client</option>
                       <template x-for="c in companies" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
                     </select>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Remit Info *</label>
-                    <select x-model="recurringForm.remit_information_id" required class="form-input focus:ring-purple-500">
+                    <select x-model="recurringForm.remit_information_id" required class="form-input focus:ring-orange-500">
                       <option value="">Select remit info</option>
                       <template x-for="r in remitInfos" :key="r.id"><option :value="r.id" x-text="r.name"></option></template>
                     </select>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Base discount</label>
-                    <input type="number" step="0.01" min="0" x-model.number="recurringForm.base_discount" class="form-input focus:ring-purple-500" placeholder="0.00">
+                    <input type="number" step="0.01" min="0" x-model.number="recurringForm.base_discount" class="form-input focus:ring-orange-500" placeholder="0.00">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Base penalty</label>
-                    <input type="number" step="0.01" min="0" x-model.number="recurringForm.base_penalty" class="form-input focus:ring-purple-500" placeholder="0.00">
+                    <input type="number" step="0.01" min="0" x-model.number="recurringForm.base_penalty" class="form-input focus:ring-orange-500" placeholder="0.00">
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Additional info</label>
-                    <textarea x-model="recurringForm.base_additional_information" rows="2" class="form-input focus:ring-purple-500" placeholder="Optional notes copied to each generated invoice"></textarea>
+                    <textarea x-model="recurringForm.base_additional_information" rows="2" class="form-input focus:ring-orange-500" placeholder="Optional notes copied to each generated invoice"></textarea>
                   </div>
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-gray-200">
                   <div class="flex justify-between items-center mb-2">
                     <h4 class="font-medium text-gray-900 text-sm">Lines</h4>
-                    <button type="button" @click="recurringForm.lines.push({ product_id: '', quantity: 1, description: '' })" class="text-sm text-purple-600 hover:text-purple-800">+ Add</button>
+                    <button type="button" @click="recurringForm.lines.push({ product_id: '', quantity: 1, description: '' })" class="text-sm text-orange-600 hover:text-orange-800">+ Add</button>
                   </div>
                   <template x-for="(line, idx) in recurringForm.lines" :key="idx">
                     <div class="space-y-2 mb-3 p-2 bg-white border border-gray-200 rounded">
-                      <select x-model="line.product_id" required class="form-input focus:ring-purple-500 text-sm">
+                      <select x-model="line.product_id" x-effect="$nextTick(() => { $el.value = line.product_id })" required class="form-input focus:ring-orange-500 text-sm">
                         <option value="">Select product</option>
-                        <template x-for="p in products" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
+                        <template x-for="p in products" :key="p.id"><option :value="p.id" x-text="p.name + ' - ' + p.price"></option></template>
                       </select>
                       <div class="flex gap-2">
-                        <input type="number" min="1" x-model.number="line.quantity" required class="form-input focus:ring-purple-500 flex-1 text-sm" placeholder="Qty">
+                        <input type="number" min="1" x-model.number="line.quantity" required class="form-input focus:ring-orange-500 flex-1 text-sm" placeholder="Qty">
                         <button type="button" @click="recurringForm.lines.splice(idx, 1)" x-show="recurringForm.lines.length > 1" class="text-red-600 hover:text-red-800 text-sm px-2">Remove</button>
                       </div>
-                      <input type="text" x-model="line.description" class="form-input focus:ring-purple-500 text-sm" placeholder="Optional description">
+                      <input type="text" x-model="line.description" class="form-input focus:ring-orange-500 text-sm" placeholder="Optional description">
                     </div>
                   </template>
                 </div>
 
                 <div class="flex gap-2 mt-4 pt-3 border-t border-gray-200">
-                  <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium" x-text="editingRecurring ? 'Update' : 'Save'"></button>
+                  <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm font-medium" x-text="editingRecurring ? 'Update' : 'Save'"></button>
                   <button type="button" @click="resetRecurringForm()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium">Cancel</button>
                 </div>
               </form>
@@ -738,23 +741,29 @@
                 <div x-show="recurringInvoices.length > 0" class="space-y-3">
                   <template x-for="ri in recurringInvoices" :key="ri.id">
                     <div class="entity-card">
-                      <div class="flex items-center gap-2">
-                        <h3 class="font-medium text-gray-900 text-sm flex-1 truncate" x-text="ri.name"></h3>
-                        <span class="status-badge" :class="ri.is_active ? 'status-badge-paid' : 'status-badge-unpaid'" x-text="ri.is_active ? 'Active' : 'Inactive'"></span>
-                      </div>
-                      <p class="text-xs text-gray-600 mt-1">
-                        Day <strong x-text="ri.generate_on_day"></strong> · <span x-text="formatRecurringRule(ri)"></span>
-                      </p>
-                      <p class="text-xs text-gray-600 truncate">
-                        <span x-text="(ri.client && ri.client.name) || '—'"></span>
-                      </p>
-                      <p class="text-xs text-gray-500">
-                        Last: <span x-text="ri.last_generated_at ? new Date(ri.last_generated_at).toLocaleDateString('en-CA') : 'never'"></span>
-                      </p>
-                      <div class="flex gap-3 mt-2 flex-wrap">
-                        <button @click="generateRecurringNow(ri.id)" class="text-xs text-purple-600 hover:text-purple-800 font-medium">Generate Now</button>
-                        <button @click="startEditingRecurring(ri)" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                        <button @click="deleteRecurring(ri.id)" class="text-xs text-red-600 hover:text-red-800 font-medium">Delete</button>
+                      <div class="flex justify-between items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                          <h3 class="font-medium text-gray-900 text-sm truncate" x-text="ri.name"></h3>
+                          <p class="text-xs text-gray-600 mt-1">
+                            Day <strong x-text="ri.generate_on_day"></strong> · <span x-text="formatRecurringRule(ri)"></span>
+                          </p>
+                          <p class="text-xs text-gray-600 truncate">
+                            <span x-text="(ri.client && ri.client.name) || '—'"></span>
+                          </p>
+                          <p class="text-xs text-gray-500">
+                            Last: <span x-text="ri.last_generated_at ? new Date(ri.last_generated_at).toLocaleDateString('en-CA') : 'never'"></span>
+                          </p>
+                          <div class="mt-2">
+                            <span class="status-badge" :class="ri.is_active ? 'status-badge-paid' : 'status-badge-unpaid'" x-text="ri.is_active ? 'Active' : 'Inactive'"></span>
+                          </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 ml-2">
+                          <div class="flex gap-2">
+                            <button @click="startEditingRecurring(ri)" class="edit-button text-blue-600 hover:text-blue-800" title="Edit">Edit</button>
+                            <button @click="deleteRecurring(ri.id)" class="delete-button" title="Delete">Delete</button>
+                          </div>
+                          <button @click="generateRecurringNow(ri.id)" class="text-xs text-orange-600 hover:text-orange-800 font-medium" title="Generate Now">Generate Now</button>
+                        </div>
                       </div>
                     </div>
                   </template>
@@ -762,12 +771,11 @@
               </div>
             </div>
           </section>
-        </div>
+          </div>
+          <!-- /LEFT -->
 
-        <!-- =============================================== -->
-        <!-- BOTTOM: INVOICES SECTION (full width)        -->
-        <!-- =============================================== -->
-        <section class="crud-section invoices-section">
+          <!-- RIGHT: Invoices (3/4 width) -->
+        <section class="crud-section invoices-section xl:col-span-3">
             <div class="section-header">
               <h2 class="section-title">
                 <svg class="section-icon text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -909,8 +917,9 @@
                   <template x-for="(line, index) in (editingInvoice ? editInvoice.invoice_lines : newInvoice.invoice_lines)" :key="index">
                     <div class="mb-4 border border-gray-200 rounded-lg p-3">
                       <div class="flex gap-2 mb-2">
-                        <select 
+                        <select
                           x-model="line.product_id"
+                          x-effect="$nextTick(() => { $el.value = line.product_id })"
                           required
                           class="form-input focus:ring-yellow-500 flex-1"
                         >
@@ -1095,6 +1104,8 @@
               </div>
             </div>
         </section>
+        </div>
+        <!-- /TWO-COLUMN LAYOUT -->
       </main>
     </div>
 

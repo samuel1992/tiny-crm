@@ -24,8 +24,9 @@ func sendInvoiceNotification(inv *Invoice) error {
 		return nil
 	}
 
-	link := fmt.Sprintf("%s/api/invoices/%d/open?template=default_invoice.html",
-		strings.TrimRight(baseURL, "/"), inv.ID)
+	base := strings.TrimRight(baseURL, "/")
+	linkPT := fmt.Sprintf("%s/api/invoices/%d/open?template=default_invoice.html", base, inv.ID)
+	linkEN := fmt.Sprintf("%s/api/invoices/%d/open?template=default_invoice_en.html", base, inv.ID)
 
 	subject := fmt.Sprintf("Nova fatura gerada: %s — %s", inv.Identification(), inv.Client.Name)
 	body := fmt.Sprintf(
@@ -34,12 +35,14 @@ func sendInvoiceNotification(inv *Invoice) error {
 			"Identificação: %s\r\n"+
 			"Total: R$ %.2f\r\n"+
 			"Vencimento: %s\r\n\r\n"+
-			"Abrir: %s\r\n",
+			"Abrir (PT): %s\r\n"+
+			"Open (EN): %s\r\n",
 		inv.Client.Name,
 		inv.Identification(),
 		inv.Total(),
 		inv.DueDate.Format("2006-01-02"),
-		link,
+		linkPT,
+		linkEN,
 	)
 
 	msg := []byte(
