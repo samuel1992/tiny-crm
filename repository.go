@@ -276,16 +276,21 @@ func (r *Repository) CreateInvoice(invoice *Invoice) error {
 
 func (r *Repository) UpdateInvoice(invoice *Invoice) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// First, delete existing invoice lines
+		var existing Invoice
+		if err := tx.Select("uuid", "issue_date").First(&existing, invoice.ID).Error; err != nil {
+			return err
+		}
+		invoice.UUID = existing.UUID
+		invoice.IssueDate = existing.IssueDate
+
 		if err := tx.Where("invoice_id = ?", invoice.ID).Delete(&InvoiceLine{}).Error; err != nil {
 			return err
 		}
-		
-		// Then save the invoice with new lines
+
 		if err := tx.Save(invoice).Error; err != nil {
 			return err
 		}
-		
+
 		return nil
 	})
 }

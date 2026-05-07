@@ -1040,6 +1040,73 @@ func TestInvoiceUpdate(t *testing.T) {
 	}
 }
 
+func TestInvoiceUpdatePreservesUUIDAndIssueDate(t *testing.T) {
+	server, testRepo := setupTestServer(t)
+	defer server.Close()
+
+	companyID, productID, remitID, err := createTestData(testRepo)
+	if err != nil {
+		t.Fatalf("Failed to create test data: %v", err)
+	}
+
+	invoice := Invoice{
+		Number:             intPtr(6001),
+		DueDate:            time.Now().AddDate(0, 1, 0),
+		RemitInformationID: remitID,
+		CompanyID:          companyID,
+		ClientID:           companyID,
+		InvoiceLines: []InvoiceLine{
+			{ProductID: productID, Quantity: 1},
+		},
+	}
+	if err := testRepo.CreateInvoice(&invoice); err != nil {
+		t.Fatalf("Failed to create test invoice: %v", err)
+	}
+
+	originalUUID := invoice.UUID
+	originalIssueDate := invoice.IssueDate
+	if originalUUID == (uuid.UUID{}) {
+		t.Fatal("Precondition failed: created invoice should have a non-zero UUID")
+	}
+	if originalIssueDate.IsZero() {
+		t.Fatal("Precondition failed: created invoice should have a non-zero IssueDate")
+	}
+
+	// Mimic the frontend: PUT body omits uuid and issue_date.
+	updateJSON := fmt.Sprintf(`{
+		"number": 6002,
+		"discount": 0,
+		"penalty": 0,
+		"due_date": "2025-06-30T23:59:59Z",
+		"remit_information_id": %d,
+		"company_id": %d,
+		"client_id": %d,
+		"invoice_lines": [
+			{"product_id": %d, "quantity": 2}
+		]
+	}`, remitID, companyID, companyID, productID)
+
+	resp, body, err := makeRequest(server, "PUT", "/api/invoices/"+strconv.Itoa(int(invoice.ID)), updateJSON)
+	if err != nil {
+		t.Fatalf("Failed to update invoice: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+
+	reloaded, err := testRepo.GetInvoice(invoice.ID)
+	if err != nil {
+		t.Fatalf("Failed to reload invoice: %v", err)
+	}
+
+	if reloaded.UUID != originalUUID {
+		t.Errorf("UUID changed across update: was %s, now %s", originalUUID, reloaded.UUID)
+	}
+	if !reloaded.IssueDate.Equal(originalIssueDate) {
+		t.Errorf("IssueDate changed across update: was %s, now %s", originalIssueDate, reloaded.IssueDate)
+	}
+}
+
 func TestInvoiceDelete(t *testing.T) {
 	server, testRepo := setupTestServer(t)
 	defer server.Close()
