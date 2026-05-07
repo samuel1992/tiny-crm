@@ -62,6 +62,9 @@
         max-height: 24rem;
         overflow-y: auto;
       }
+      .invoices-section .entity-list {
+        max-height: 38rem;
+      }
       .entity-card {
         border: 1px solid rgb(229 231 235);
         border-radius: 0.5rem;
@@ -237,13 +240,12 @@
       <!-- =============================================== -->
       <!-- MAIN DASHBOARD CONTENT                       -->
       <!-- =============================================== -->
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-          <!-- =============================================== -->
-          <!-- LEFT SIDEBAR: Companies, Products, Remit     -->
-          <!-- =============================================== -->
-          <aside class="space-y-8">
+        <!-- =============================================== -->
+        <!-- TOP ROW: Companies, Products, Remit          -->
+        <!-- =============================================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           <!-- =============================================== -->
           <!-- COMPANIES CRUD SECTION                       -->
@@ -617,13 +619,12 @@
               </div>
             </div>
           </section>
-          </aside>
+        </div>
 
-          <!-- =============================================== -->
-          <!-- MAIN: INVOICES SECTION                       -->
-          <!-- =============================================== -->
-          <div class="lg:col-span-2">
-          <section class="crud-section">
+        <!-- =============================================== -->
+        <!-- BOTTOM: INVOICES SECTION (full width)        -->
+        <!-- =============================================== -->
+        <section class="crud-section invoices-section">
             <div class="section-header">
               <h2 class="section-title">
                 <svg class="section-icon text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -950,9 +951,7 @@
                 </template>
               </div>
             </div>
-          </section>
-          </div>
-        </div>
+        </section>
       </main>
     </div>
 
