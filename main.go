@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 //go:embed templates
@@ -55,6 +56,14 @@ func setupRoutes(testing bool) *http.ServeMux {
 	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice, testing))
 	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice, testing))
 	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates, testing))
+
+	mux.HandleFunc("GET /api/recurring_invoices", basicAuthMiddleware(getRecurringInvoices, testing))
+	mux.HandleFunc("POST /api/recurring_invoices", basicAuthMiddleware(createRecurringInvoice, testing))
+	mux.HandleFunc("GET /api/recurring_invoices/{id}", basicAuthMiddleware(getRecurringInvoice, testing))
+	mux.HandleFunc("PUT /api/recurring_invoices/{id}", basicAuthMiddleware(updateRecurringInvoice, testing))
+	mux.HandleFunc("DELETE /api/recurring_invoices/{id}", basicAuthMiddleware(deleteRecurringInvoice, testing))
+	mux.HandleFunc("POST /api/recurring_invoices/{id}/generate_now", basicAuthMiddleware(generateRecurringInvoiceNow, testing))
+
 	mux.HandleFunc("POST /api/logout", logout)
 
 	return mux
@@ -115,6 +124,7 @@ func main() {
 	}
 
 	mux := setupRoutes(false)
+	startRecurringInvoiceScheduler(repo)
 
 	fmt.Println("Running on port " + PORT)
 	http.ListenAndServe(":"+PORT, mux)
@@ -546,4 +556,111 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// Set WWW-Authenticate header to prompt for new credentials
 	w.Header().Set("WWW-Authenticate", `Basic realm="Tiny CRM"`)
 	http.Error(w, "Logged out successfully", http.StatusUnauthorized)
+}
+
+func getRecurringInvoices(w http.ResponseWriter, r *http.Request) {
+	items, err := repo.GetRecurringInvoices()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+
+func getRecurringInvoice(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	item, err := repo.GetRecurringInvoice(uint(id))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(item)
+}
+
+func createRecurringInvoice(w http.ResponseWriter, r *http.Request) {
+	var ri RecurringInvoice
+	if err := json.NewDecoder(r.Body).Decode(&ri); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := repo.CreateRecurringInvoice(&ri); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	created, err := repo.GetRecurringInvoice(ri.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(created)
+}
+
+func updateRecurringInvoice(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	var ri RecurringInvoice
+	if err := json.NewDecoder(r.Body).Decode(&ri); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	ri.ID = uint(id)
+	if err := repo.UpdateRecurringInvoice(&ri); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	updated, err := repo.GetRecurringInvoice(uint(id))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
+func deleteRecurringInvoice(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	if err := repo.DeleteRecurringInvoice(uint(id)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func generateRecurringInvoiceNow(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	inv, err := repo.GenerateRecurringInvoiceNow(uint(id), time.Now())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if inv == nil {
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(`{"error":"already generated today"}`))
+		return
+	}
+	if err := sendInvoiceNotification(inv); err != nil {
+		log.Printf("manual generate: email failed for invoice %d: %v", inv.ID, err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(inv)
 }
