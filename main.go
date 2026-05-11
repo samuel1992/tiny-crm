@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -12,6 +14,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 )
 
 //go:embed templates
@@ -19,6 +24,21 @@ var templatesFS embed.FS
 
 var repo *Repository
 var PORT = "8080"
+
+var chromeAllocCtx context.Context
+var chromeAllocCancel context.CancelFunc
+
+func initChromeAllocator() {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.NoSandbox,
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("headless", "new"),
+	)
+	if path := os.Getenv("CHROME_PATH"); path != "" {
+		opts = append(opts, chromedp.ExecPath(path))
+	}
+	chromeAllocCtx, chromeAllocCancel = chromedp.NewExecAllocator(context.Background(), opts...)
+}
 
 func setupRoutes(testing bool) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -55,6 +75,7 @@ func setupRoutes(testing bool) *http.ServeMux {
 	mux.HandleFunc("PUT /api/invoices/{invoiceId}", basicAuthMiddleware(updateInvoice, testing))
 	mux.HandleFunc("DELETE /api/invoices/{invoiceId}", basicAuthMiddleware(deleteInvoice, testing))
 	mux.HandleFunc("GET /api/invoices/{invoiceId}/open", basicAuthMiddleware(openInvoice, testing))
+	mux.HandleFunc("GET /api/invoices/{invoiceId}/pdf", basicAuthMiddleware(pdfInvoice, testing))
 	mux.HandleFunc("GET /api/list_invoice_templates", basicAuthMiddleware(listTemplates, testing))
 
 	mux.HandleFunc("GET /api/recurring_invoices", basicAuthMiddleware(getRecurringInvoices, testing))
@@ -122,6 +143,9 @@ func main() {
 		fmt.Printf("User '%s' created successfully\n", username)
 		return
 	}
+
+	initChromeAllocator()
+	defer chromeAllocCancel()
 
 	mux := setupRoutes(false)
 	startRecurringInvoiceScheduler(repo)
@@ -549,6 +573,101 @@ func openInvoice(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error executing template %s: %v", tmplPath, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+func pdfInvoice(w http.ResponseWriter, r *http.Request) {
+	invoiceIdStr := r.PathValue("invoiceId")
+	invoiceId, err := strconv.ParseUint(invoiceIdStr, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	templateName := r.URL.Query().Get("template")
+	if templateName == "" {
+		http.Error(w, "template query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	invoice, err := repo.GetInvoice(uint(invoiceId))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	templateData := struct {
+		Invoice *Invoice
+	}{
+		Invoice: invoice,
+	}
+
+	tmplPath := filepath.Join("templates", "invoices", templateName)
+	tmpl, err := template.ParseFS(templatesFS, tmplPath)
+	if err != nil {
+		log.Printf("Error parsing template %s: %v", tmplPath, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var htmlBuf bytes.Buffer
+	if err := tmpl.Execute(&htmlBuf, templateData); err != nil {
+		log.Printf("Error executing template %s: %v", tmplPath, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	htmlFile, err := os.CreateTemp("", "invoice-*.html")
+	if err != nil {
+		log.Printf("Error creating temp html file: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	htmlPath := htmlFile.Name()
+	defer os.Remove(htmlPath)
+	if _, err := htmlFile.Write(htmlBuf.Bytes()); err != nil {
+		htmlFile.Close()
+		log.Printf("Error writing temp html file: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	htmlFile.Close()
+
+	ctx, cancel := chromedp.NewContext(chromeAllocCtx)
+	defer cancel()
+	ctx, cancelTimeout := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelTimeout()
+
+	var pdfBuf []byte
+	if err := chromedp.Run(ctx,
+		chromedp.Navigate("file://"+htmlPath),
+		chromedp.WaitReady("body"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			buf, _, err := page.PrintToPDF().
+				WithPrintBackground(true).
+				WithPaperWidth(8.27).
+				WithPaperHeight(11.69).
+				WithMarginTop(0.4).
+				WithMarginBottom(0.4).
+				WithMarginLeft(0.4).
+				WithMarginRight(0.4).
+				Do(ctx)
+			if err != nil {
+				return err
+			}
+			pdfBuf = buf
+			return nil
+		}),
+	); err != nil {
+		log.Printf("Error rendering PDF for template %s: %v", tmplPath, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s.pdf"`, invoice.Repr()))
+	if _, err := w.Write(pdfBuf); err != nil {
+		log.Printf("Error streaming PDF: %v", err)
 	}
 }
 
