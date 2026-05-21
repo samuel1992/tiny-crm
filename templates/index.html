@@ -117,6 +117,147 @@
         color: rgb(153 27 27);
         background-color: rgb(254 226 226);
       }
+
+      /* Invoice Due-Date Calendar */
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.25rem;
+      }
+      .calendar-weekday {
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgb(107 114 128);
+        padding: 0.25rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .calendar-day {
+        position: relative;
+        min-height: 5.5rem;
+        border: 1px solid rgb(229 231 235);
+        border-radius: 0.375rem;
+        padding: 0.25rem;
+        background-color: white;
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        overflow: visible;
+      }
+      .calendar-day-outside {
+        background-color: rgb(249 250 251);
+        color: rgb(156 163 175);
+      }
+      .calendar-day-today {
+        border-color: rgb(202 138 4);
+        box-shadow: 0 0 0 1px rgb(202 138 4);
+        background-color: rgb(254 252 232);
+      }
+      .calendar-day-number {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgb(75 85 99);
+        align-self: flex-end;
+        line-height: 1;
+      }
+      .calendar-day-outside .calendar-day-number {
+        color: rgb(156 163 175);
+      }
+      .calendar-day-today .calendar-day-number {
+        color: rgb(161 98 7);
+      }
+      .calendar-day-totals {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.125rem;
+        margin-top: 0.125rem;
+      }
+      .calendar-total-pill {
+        font-size: 0.625rem;
+        font-weight: 600;
+        padding: 0.0625rem 0.25rem;
+        border-radius: 9999px;
+        line-height: 1.2;
+      }
+      .calendar-total-paid {
+        color: rgb(22 101 52);
+        background-color: rgb(220 252 231);
+      }
+      .calendar-total-unpaid {
+        color: rgb(153 27 27);
+        background-color: rgb(254 226 226);
+      }
+      .calendar-invoices {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        margin-top: 0.125rem;
+      }
+      .calendar-invoice-pill {
+        position: relative;
+        font-size: 0.625rem;
+        font-weight: 500;
+        padding: 0.125rem 0.25rem;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: 1px solid transparent;
+      }
+      .calendar-invoice-paid {
+        color: rgb(22 101 52);
+        background-color: rgb(187 247 208);
+        border-color: rgb(134 239 172);
+      }
+      .calendar-invoice-paid:hover {
+        background-color: rgb(134 239 172);
+      }
+      .calendar-invoice-unpaid {
+        color: rgb(153 27 27);
+        background-color: rgb(254 202 202);
+        border-color: rgb(252 165 165);
+      }
+      .calendar-invoice-unpaid:hover {
+        background-color: rgb(252 165 165);
+      }
+      .calendar-tooltip {
+        position: absolute;
+        bottom: calc(100% + 0.25rem);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 50;
+        min-width: 12rem;
+        max-width: 16rem;
+        background-color: rgb(17 24 39);
+        color: white;
+        padding: 0.5rem 0.625rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 400;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+        pointer-events: none;
+        white-space: normal;
+      }
+      .calendar-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: rgb(17 24 39);
+      }
+      .calendar-tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.125rem;
+      }
+      .calendar-tooltip-label {
+        color: rgb(156 163 175);
+      }
     </style>
   </head>
   <body class="bg-gray-50 min-h-screen">
@@ -798,6 +939,100 @@
               </button>
             </div>
             <div class="section-content">
+              <!-- Due-Date Calendar -->
+              <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      @click="prevMonth()"
+                      x-show="showCalendar"
+                      class="px-2 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Previous month"
+                    >&lt;</button>
+                    <h3 class="font-medium text-gray-900 min-w-[8rem] text-center" x-text="calendarLabel()"></h3>
+                    <button
+                      type="button"
+                      @click="nextMonth()"
+                      x-show="showCalendar"
+                      class="px-2 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Next month"
+                    >&gt;</button>
+                  </div>
+                  <button
+                    type="button"
+                    @click="showCalendar = !showCalendar"
+                    class="text-sm font-medium text-yellow-700 hover:text-yellow-900"
+                  >
+                    <span x-show="showCalendar">Hide calendar</span>
+                    <span x-show="!showCalendar">Show calendar</span>
+                  </button>
+                </div>
+                <div x-show="showCalendar" x-transition>
+                  <div class="calendar-grid mb-1">
+                    <template x-for="wd in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']" :key="wd">
+                      <div class="calendar-weekday" x-text="wd"></div>
+                    </template>
+                  </div>
+                  <div class="calendar-grid">
+                    <template x-for="(cell, idx) in calendarCells()" :key="idx">
+                      <div
+                        class="calendar-day"
+                        :class="{
+                          'calendar-day-outside': !cell.inMonth,
+                          'calendar-day-today': cell.isToday
+                        }"
+                      >
+                        <span class="calendar-day-number" x-text="cell.date.getDate()"></span>
+                        <template x-if="cell.invoices.length > 0">
+                          <div class="calendar-day-totals">
+                            <span
+                              x-show="dayTotals(cell.invoices).paid > 0"
+                              class="calendar-total-pill calendar-total-paid"
+                              x-text="'Paid $' + dayTotals(cell.invoices).paid.toFixed(2)"
+                            ></span>
+                            <span
+                              x-show="dayTotals(cell.invoices).unpaid > 0"
+                              class="calendar-total-pill calendar-total-unpaid"
+                              x-text="'Due $' + dayTotals(cell.invoices).unpaid.toFixed(2)"
+                            ></span>
+                          </div>
+                        </template>
+                        <div class="calendar-invoices">
+                          <template x-for="invoice in cell.invoices" :key="invoice.id">
+                            <div
+                              x-data="{ hover: false }"
+                              @mouseenter="hover = true"
+                              @mouseleave="hover = false"
+                              @click="scrollToInvoice(invoice.id)"
+                              class="calendar-invoice-pill"
+                              :class="invoice.paid ? 'calendar-invoice-paid' : 'calendar-invoice-unpaid'"
+                              x-text="invoiceIdentification(invoice) + ' · ' + (invoice.client?.name || 'Unknown')"
+                            >
+                              <div x-show="hover" class="calendar-tooltip">
+                                <div class="font-semibold" x-text="invoiceIdentification(invoice)"></div>
+                                <div class="calendar-tooltip-row">
+                                  <span class="calendar-tooltip-label">Client</span>
+                                  <span x-text="invoice.client?.name || 'Unknown'"></span>
+                                </div>
+                                <div class="calendar-tooltip-row">
+                                  <span class="calendar-tooltip-label">Status</span>
+                                  <span x-text="invoice.paid ? 'Paid' : 'Unpaid'"></span>
+                                </div>
+                                <div class="calendar-tooltip-row">
+                                  <span class="calendar-tooltip-label">Total</span>
+                                  <span x-text="'$' + invoiceTotal(invoice).toFixed(2)"></span>
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
               <!-- Invoice Create/Edit Form -->
               <form x-show="showInvoiceForm" @submit.prevent="editingInvoice ? updateInvoice() : createInvoice()" class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h3 class="font-medium text-gray-900 mb-4" x-text="editingInvoice ? 'Edit Invoice' : 'Add New Invoice'"></h3>
@@ -987,7 +1222,8 @@
                 <div x-show="invoices.length === 0" class="empty-state">No invoices found</div>
               <div x-show="invoices.length > 0" class="space-y-4">
                 <template x-for="invoice in invoices.sort((a, b) => new Date(b.due_date) - new Date(a.due_date))" :key="invoice.id">
-                  <div class="entity-card" 
+                  <div class="entity-card"
+                       :id="'invoice-' + invoice.id"
                        :class="invoice.paid ? 'paid-invoice' : 'unpaid-invoice'">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
@@ -1059,7 +1295,7 @@
                           </template>
                           <div class="text-sm font-medium text-gray-800 mt-2 pt-1 border-t border-gray-200 flex justify-between">
                             <span>Total:</span>
-                            <span>$<span x-text="(invoice.invoice_lines.reduce((sum, line) => sum + (line.product?.price || 0) * (line.quantity || 0), 0) - (invoice.discount || 0) + (invoice.penalty || 0)).toFixed(2)"></span></span>
+                            <span>$<span x-text="invoiceTotal(invoice).toFixed(2)"></span></span>
                           </div>
                         </div>
                       </div>
@@ -1132,6 +1368,11 @@
           showRemitForm: false,
           showInvoiceForm: false,
           showRecurringForm: false,
+
+          // Calendar State
+          showCalendar: true,
+          calendarYear: new Date().getFullYear(),
+          calendarMonth: new Date().getMonth(),
 
           // UI State - Edit Mode
           editingCompany: null,
@@ -1218,6 +1459,90 @@
               return;
             }
             window.open(`/api/invoices/${invoiceId}/open?template=${templateName}`, '_blank');
+          },
+
+          // =============================================
+          // CALENDAR HELPERS
+          // =============================================
+
+          calendarLabel() {
+            return new Date(this.calendarYear, this.calendarMonth, 1)
+              .toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+          },
+
+          prevMonth() {
+            if (this.calendarMonth === 0) {
+              this.calendarMonth = 11;
+              this.calendarYear -= 1;
+            } else {
+              this.calendarMonth -= 1;
+            }
+          },
+
+          nextMonth() {
+            if (this.calendarMonth === 11) {
+              this.calendarMonth = 0;
+              this.calendarYear += 1;
+            } else {
+              this.calendarMonth += 1;
+            }
+          },
+
+          calendarCells() {
+            const buckets = new Map();
+            for (const inv of this.invoices) {
+              if (!inv.due_date) continue;
+              const key = new Date(inv.due_date).toLocaleDateString('en-CA');
+              if (!buckets.has(key)) buckets.set(key, []);
+              buckets.get(key).push(inv);
+            }
+            const firstOfMonth = new Date(this.calendarYear, this.calendarMonth, 1);
+            const startOffset = firstOfMonth.getDay();
+            const gridStart = new Date(this.calendarYear, this.calendarMonth, 1 - startOffset);
+            const today = new Date();
+            const todayKey = today.toLocaleDateString('en-CA');
+            const cells = [];
+            for (let i = 0; i < 42; i++) {
+              const date = new Date(gridStart);
+              date.setDate(gridStart.getDate() + i);
+              const key = date.toLocaleDateString('en-CA');
+              cells.push({
+                date,
+                inMonth: date.getMonth() === this.calendarMonth,
+                isToday: key === todayKey,
+                invoices: buckets.get(key) || [],
+              });
+            }
+            return cells;
+          },
+
+          invoiceTotal(invoice) {
+            const lines = invoice.invoice_lines || [];
+            const subtotal = lines.reduce(
+              (sum, line) => sum + (line.product?.price || 0) * (line.quantity || 0),
+              0,
+            );
+            return subtotal - (invoice.discount || 0) + (invoice.penalty || 0);
+          },
+
+          invoiceIdentification(invoice) {
+            if (invoice.number && invoice.number > 0) return '#' + invoice.number;
+            if (invoice.uuid) return invoice.uuid.slice(0, 8);
+            return '#' + invoice.id;
+          },
+
+          dayTotals(invoices) {
+            let paid = 0, unpaid = 0;
+            for (const inv of invoices) {
+              const t = this.invoiceTotal(inv);
+              if (inv.paid) paid += t; else unpaid += t;
+            }
+            return { paid, unpaid };
+          },
+
+          scrollToInvoice(id) {
+            const el = document.getElementById('invoice-' + id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           },
 
           async logout() {
